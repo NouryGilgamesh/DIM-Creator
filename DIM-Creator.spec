@@ -31,5 +31,5 @@ exe = EXE(
     upx=True,
     console=False,
     icon='assets/images/logo/x128.ico',
-    runtime_tmpdir=None,   # typisch für onefile-spec
+    runtime_tmpdir=None,
 )

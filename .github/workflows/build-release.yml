@@ -93,13 +93,20 @@ jobs:
 
           Compress-Archive -Path $items -DestinationPath $zipPath -Force
 
-      - name: Upload artifact (CI)
+      - name: Upload artifact (EXE)
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         uses: actions/upload-artifact@v4
         with:
-          name: dim-creator-windows
-          path: |
-            dist/DIM-Creator.exe
-            dist/*.zip
+          name: dim-creator-exe
+          path: dist/DIM-Creator.exe
+          if-no-files-found: error
+
+      - name: Upload artifact (ZIP)
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dim-creator-zip
+          path: dist/*.zip
           if-no-files-found: error
 
       - name: Attach to Release (on tags)
