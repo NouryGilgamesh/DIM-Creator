@@ -266,7 +266,7 @@ class SettingsDialog(QDialog):
 
         add_link("GITHUB", "GitHub", github_url, primary=True)
         add_link("ISSUE", "Issues", issues_url)
-        add_link("HOME", "Website", website_url)
+        add_link("HOME", "Website (WIP)", website_url)
         add_link("BOOK_SHELF", "License", license_url)
         links_col.addStretch(1)
 
