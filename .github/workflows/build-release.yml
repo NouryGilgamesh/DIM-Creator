@@ -92,6 +92,30 @@ jobs:
 
           Compress-Archive -Path $items -DestinationPath $zipPath -Force
 
+      - name: Extract changelog section for tag
+        id: changelog
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME:-dev}"
+          if [ ! -f CHANGELOG.md ]; then
+            echo "notes=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          NOTES="$(awk -v tag="$TAG" '
+            BEGIN{found=0}
+            /^\s*##[[:space:]]+/ {
+              if(found){exit}
+              if ($0 ~ ("^\\s*##[[:space:]]+" tag "([[:space:]]|$)")) {found=1}
+            }
+            found{print}
+          ' CHANGELOG.md)"
+          NOTES="$(printf "%s\n" "$NOTES" | awk 'BEGIN{p=0} {if($0!~"^\\s*$"){p=1} if(p){print}}' | tac | awk 'BEGIN{p=0} {if($0!~"^\\s*$"){p=1} if(p){print}}' | tac)"
+          {
+            echo 'notes<<EOF'
+            echo "$NOTES"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Upload artifact (EXE)
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         uses: actions/upload-artifact@v4
@@ -112,11 +136,20 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-      - name: Attach to Release (on tags)
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Attach to Release with CHANGELOG body (on tags)
+        if: startsWith(github.ref, 'refs/tags/') && steps.changelog.outputs.notes != ''
         uses: softprops/action-gh-release@v2
         with:
+          body: ${{ steps.changelog.outputs.notes }}
           files: |
             dist/DIM-Creator.exe
             dist/*.zip
+
+      - name: Attach to Release (auto notes) (on tags)
+        if: startsWith(github.ref, 'refs/tags/') && steps.changelog.outputs.notes == ''
+        uses: softprops/action-gh-release@v2
+        with:
           generate_release_notes: true
+          files: |
+            dist/DIM-Creator.exe
+            dist/*.zip
