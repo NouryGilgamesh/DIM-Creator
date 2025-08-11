@@ -4,7 +4,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
 ![PyQt5](https://img.shields.io/badge/GUI-PyQt5-brightgreen)
-![OS](https://img.shields.io/badge/OS-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
+![OS](https://img.shields.io/badge/OS-Windows-lightgrey)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-orange.svg)](LICENSE)
 
 DIM-Creator helps you prepare content, generate manifests, attach product imagery, and bundle everything into a ready-to-install DIM `.zip`—without wrestling with folder structures or manual XML.
@@ -23,6 +23,7 @@ DIM-Creator helps you prepare content, generate manifests, attach product imager
 
 ---
 
+<a id="features"></a>
 ## ✨ Features
 - **One-click DIM Packages** — Build DIM-ready `.zip` archives with manifests and supplements.
 - **Drag & Drop** — Add files or archives directly into your project.
@@ -34,6 +35,7 @@ DIM-Creator helps you prepare content, generate manifests, attach product imager
 
 ---
 
+<a id="requirements"></a>
 ## ✅ Requirements
 - **Python** 3.9 or newer
 - **PyQt5** (installed via `requirements.txt`)
@@ -44,6 +46,7 @@ DIM-Creator helps you prepare content, generate manifests, attach product imager
 
 ---
 
+<a id="installation"></a>
 ## 🛠 Installation
 ```bash
 # 1) Clone the repository
@@ -56,6 +59,7 @@ pip install -r requirements.txt
 
 ---
 
+<a id="quick-start"></a>
 ## 🚀 Quick Start
 ```bash
 python app.py
@@ -70,6 +74,7 @@ The finished package `.zip` will appear in your configured **output path**.
 
 ---
 
+<a id="usage-details"></a>
 ## 📚 Usage Details
 - **Stores & Tags**: Use presets to automatically prefix product IDs and apply tags.  
 - **Images**: Drop in a cover image to include product art in your DIM metadata.  
@@ -79,12 +84,16 @@ The finished package `.zip` will appear in your configured **output path**.
 
 ---
 
+<a id="screenshots"></a>
 ## 📷 Screenshots
 
-<img width="781" height="721" alt="DIM-Creator main window" src="https://github.com/user-attachments/assets/4d8c9832-72c0-48c0-87dc-4c4f3d0a8897" />
+<p align="center">
+   <img width="781" height="721" alt="DIM-Creator main window" src="https://github.com/user-attachments/assets/4d8c9832-72c0-48c0-87dc-4c4f3d0a8897" />
+</p>
 
 ---
 
+<a id="contributing"></a>
 ## 🤝 Contributing
 Contributions are welcome!  
 Feel free to open issues for bugs or enhancement ideas. For pull requests, please:
@@ -94,6 +103,7 @@ Feel free to open issues for bugs or enhancement ideas. For pull requests, pleas
 
 ---
 
+<a id="license"></a>
 ## 📜 License
 This project is licensed under the **GNU General Public License v3.0**.  
 See the [LICENSE](LICENSE) file for full details.
