@@ -1,4 +1,3 @@
-# logger_utils.py
 import os
 import sys
 import atexit
@@ -14,17 +13,15 @@ except Exception:
     APP_VERSION = "unknown"
 
 try:
-    # Uses QStandardPaths via utils, same as your current file
     from utils import documents_dir
 except Exception:
-    documents_dir = lambda: os.path.join(os.path.expanduser("~"), "Documents")  # fallback
+    documents_dir = lambda: os.path.join(os.path.expanduser("~"), "Documents")
 
 
 APP_NAME = "DIMCreator"
 ENV_LEVEL = os.getenv("DIMCREATOR_LOG_LEVEL", "INFO").upper()
 ENABLE_CONSOLE = os.getenv("DIMCREATOR_CONSOLE", "0") == "1"
 
-# Globals (kept for compatibility)
 logger: logging.Logger
 queue_listener: Optional[QueueListener] = None
 _main_log_path = None
@@ -32,7 +29,6 @@ _err_log_path = None
 
 
 class AppContextFilter(logging.Filter):
-    """Inject app-specific fields into log records."""
     def filter(self, record: logging.LogRecord) -> bool:
         record.app = APP_NAME
         record.version = APP_VERSION
@@ -40,7 +36,6 @@ class AppContextFilter(logging.Filter):
 
 
 def _ensure_logs_dir() -> str:
-    """Find a writable logs directory with sensible fallbacks."""
     candidates = [
         os.path.join(documents_dir(), APP_NAME, "Logs"),
         os.path.join(os.path.expanduser("~"), APP_NAME, "Logs"),
@@ -56,7 +51,6 @@ def _ensure_logs_dir() -> str:
             return path
         except Exception:
             continue
-    # Last resort
     path = os.path.join(tempfile.gettempdir(), APP_NAME + "_Logs")
     os.makedirs(path, exist_ok=True)
     return path
@@ -81,7 +75,6 @@ def _start_queue_listener(handlers):
 
 
 def _make_file_handlers(log_dir: str):
-    """Main rolling log + separate error log."""
     global _main_log_path, _err_log_path
 
     _main_log_path = os.path.join(log_dir, f"{APP_NAME}.log")
@@ -107,7 +100,6 @@ def _make_console_handler():
 
 
 def init_logging(level: str = ENV_LEVEL):
-    """(Re)initialize logging. Safe to call multiple times."""
     global logger, queue_listener
 
     log_dir = _ensure_logs_dir()
@@ -132,11 +124,9 @@ def init_logging(level: str = ENV_LEVEL):
     base.setLevel(getattr(logging, level.upper(), logging.INFO))
     base.propagate = False
 
-    # Prevent duplicate handlers if re-initialized
     base.handlers.clear()
     base.addHandler(qh)
 
-    # Stop a previous listener if any
     global queue_listener
     if queue_listener:
         try:
@@ -147,13 +137,10 @@ def init_logging(level: str = ENV_LEVEL):
     listener.start()
     queue_listener = listener
 
-    # Provide a module-level logger for backwards compatibility
     globals()["logger"] = base
 
-    # Hook uncaught exceptions into the log
     _install_excepthook()
 
-    # Ensure clean shutdown
     atexit.register(_shutdown_logging)
 
     base.info("Logging initialized at level %s", level.upper())
@@ -170,17 +157,12 @@ def _shutdown_logging():
 
 
 def set_level(level: str):
-    """Dynamically change the logging level (e.g., set_level('DEBUG'))."""
     lvl = getattr(logging, level.upper(), logging.INFO)
     logging.getLogger(APP_NAME).setLevel(lvl)
     logger.info("Logging level changed to %s", level.upper())
 
 
 def get_logger(name: Optional[str] = None) -> logging.Logger:
-    """
-    Get a child logger: get_logger(__name__) -> 'DIMCreator.<module>'.
-    Use the module-level 'logger' for the app-wide logger.
-    """
     if not name:
         return logging.getLogger(APP_NAME)
     return logging.getLogger(f"{APP_NAME}.{name}")
@@ -195,15 +177,12 @@ def get_error_log_file_path() -> Optional[str]:
 
 
 def _install_excepthook():
-    """Route uncaught exceptions to the log (and keep default behavior)."""
     def handle_exception(exc_type, exc_value, exc_traceback):
-        # Avoid logging KeyboardInterrupt as error
         if issubclass(exc_type, KeyboardInterrupt):
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
             return
         log = logging.getLogger(APP_NAME)
         log.exception("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
-        # Still print to stderr for visibility in dev
         try:
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
         except Exception:
@@ -212,6 +191,5 @@ def _install_excepthook():
     sys.excepthook = handle_exception
 
 
-# Initialize on import (keeps existing behavior: `from logger_utils import logger`)
 init_logging(ENV_LEVEL)
 logger.info("%s started", APP_NAME)

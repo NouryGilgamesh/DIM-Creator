@@ -1,4 +1,3 @@
-# settings.py
 import os
 import json
 from PyQt5.QtWidgets import (
@@ -126,7 +125,6 @@ class StoreDataEditor(QWidget):
 
 
 class SimpleListEditor(QWidget):
-    """Fluent-styled simple list editor (for tags and DAZ folders)."""
     def __init__(self, config_path: str, parent=None):
         super().__init__(parent)
         self.config_path = config_path
@@ -198,13 +196,11 @@ class SettingsDialog(QDialog):
 
         main_layout = QVBoxLayout(self)
 
-        # Pivot + Pages
         self.pivot = Pivot(self)
         self.stack = QStackedWidget(self)
         main_layout.addWidget(self.pivot)
         main_layout.addWidget(self.stack)
 
-        # --- General Tab ---
         general_tab = QWidget(objectName="generalTab")
         g_layout = QVBoxLayout(general_tab)
 
@@ -225,7 +221,6 @@ class SettingsDialog(QDialog):
         self.stack.addWidget(general_tab)
         self.pivot.addItem("generalTab", "General")
 
-        # --- Config editors ---
         config_dir = os.path.join(self.doc_main_dir, 'Config')
         os.makedirs(config_dir, exist_ok=True)
 
@@ -244,7 +239,6 @@ class SettingsDialog(QDialog):
         self.stack.addWidget(self.folder_editor)
         self.pivot.addItem("foldersTab", "DAZ Folders")
 
-        # --- Info Tab ---
         info_tab = QWidget(objectName="infoTab")
         info_layout = QVBoxLayout(info_tab)
         info_layout.setSpacing(14)
@@ -255,7 +249,6 @@ class SettingsDialog(QDialog):
             line.setFrameShadow(QFrame.Sunken)
             info_layout.addWidget(line)
 
-        # Top section: About (left) + Links (right)
         top_row = QHBoxLayout()
         top_row.setSpacing(16)
 
@@ -305,7 +298,6 @@ class SettingsDialog(QDialog):
 
         add_separator()
 
-        # Credits
         credits_header = SubtitleLabel("Credits (license required)", info_tab)
         credits_header.setWordWrap(True)
         info_layout.addWidget(credits_header)
@@ -333,14 +325,12 @@ class SettingsDialog(QDialog):
         self.stack.addWidget(info_tab)
         self.pivot.addItem("infoTab", "Info")
 
-        # Pivot switching
         self.pivot.currentItemChanged.connect(
             lambda k: self.stack.setCurrentWidget(self.findChild(QWidget, k))
         )
         self.pivot.setCurrentItem("generalTab")
         self.stack.setCurrentWidget(general_tab)
 
-        # Bottom buttons
         button_layout = QHBoxLayout()
         button_layout.addStretch(1)
         self.save_button = PrimaryPushButton("Save", self)

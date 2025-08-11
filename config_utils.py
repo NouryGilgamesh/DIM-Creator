@@ -1,4 +1,3 @@
-# config_utils.py
 import os
 import json
 from typing import Dict, List, Tuple
@@ -14,10 +13,6 @@ def update_configuration(
     current_version: int,
     is_dict: bool = True
 ):
-    """
-    Lädt/aktualisiert eine Config-Datei. Falls nicht vorhanden oder invalide:
-    mit default_data initialisieren. Hebt Daten auf neue Version an.
-    """
     data_updated = False
     config_data = None
 
@@ -35,7 +30,6 @@ def update_configuration(
             if old_version < current_version:
                 log.info("Upgrading config %s from v%s to v%s", config_path, old_version, current_version)
                 if is_dict:
-                    # Mergen anhand 'name'
                     existing_items = {item['name']: item for item in config_data['data'] if isinstance(item, dict) and 'name' in item}
                     for item in default_data['data']:
                         existing_items[item['name']] = item
@@ -72,17 +66,12 @@ def update_configuration(
         except Exception as e:
             log.error("Failed writing %s: %s", config_path, e)
 
-    # Safety: falls irgendwas schiefging
     data = config_data.get('data', []) if isinstance(config_data, dict) else []
     log.debug("Returning %d items from %s", len(data), config_path)
     return data
 
 
 def load_configurations(doc_main_dir: str) -> Tuple[List[str], Dict[str, str], List[str], List[str]]:
-    """
-    Lädt/aktualisiert alle relevanten Konfigurationen (Stores, Tags, DAZ-Folders).
-    Gibt (store_names, store_prefixes, tag_items, daz_folder_items) zurück.
-    """
     config_version = CONFIG_VERSION
     config_path = os.path.join(doc_main_dir, 'Config')
     os.makedirs(config_path, exist_ok=True)
