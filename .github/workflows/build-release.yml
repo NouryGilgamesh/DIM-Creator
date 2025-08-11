@@ -2,7 +2,7 @@ name: Build & Release (Windows)
 
 on:
   push:
-    branches: [ add/pyinstaller-workflow ]
+    tags: [ "v*" ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
