@@ -1,17 +1,217 @@
+# logger_utils.py
 import os
+import sys
+import atexit
+import queue
+import tempfile
 import logging
-from logging.handlers import RotatingFileHandler
-from utils import documents_dir
+from logging.handlers import RotatingFileHandler, QueueHandler, QueueListener
+from typing import Optional
 
-logger = logging.getLogger('DIMCreator')
-logger.setLevel(logging.INFO)
+try:
+    from version import __version__ as APP_VERSION
+except Exception:
+    APP_VERSION = "unknown"
 
-DC_logs_dir = os.path.join(documents_dir(), "DIMCreator", "Logs")
-os.makedirs(DC_logs_dir, exist_ok=True)
-DC_log_file_path = os.path.join(DC_logs_dir, 'DIMCreator.log')
-file_handler = RotatingFileHandler(DC_log_file_path, maxBytes=2_000_000, backupCount=3, encoding="utf-8")
-file_handler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-logger.info("DIMCreator started")
+try:
+    # Uses QStandardPaths via utils, same as your current file
+    from utils import documents_dir
+except Exception:
+    documents_dir = lambda: os.path.join(os.path.expanduser("~"), "Documents")  # fallback
+
+
+APP_NAME = "DIMCreator"
+ENV_LEVEL = os.getenv("DIMCREATOR_LOG_LEVEL", "INFO").upper()
+ENABLE_CONSOLE = os.getenv("DIMCREATOR_CONSOLE", "0") == "1"
+
+# Globals (kept for compatibility)
+logger: logging.Logger
+queue_listener: Optional[QueueListener] = None
+_main_log_path = None
+_err_log_path = None
+
+
+class AppContextFilter(logging.Filter):
+    """Inject app-specific fields into log records."""
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.app = APP_NAME
+        record.version = APP_VERSION
+        return True
+
+
+def _ensure_logs_dir() -> str:
+    """Find a writable logs directory with sensible fallbacks."""
+    candidates = [
+        os.path.join(documents_dir(), APP_NAME, "Logs"),
+        os.path.join(os.path.expanduser("~"), APP_NAME, "Logs"),
+        os.path.join(tempfile.gettempdir(), APP_NAME, "Logs"),
+    ]
+    for path in candidates:
+        try:
+            os.makedirs(path, exist_ok=True)
+            test_file = os.path.join(path, ".write_test")
+            with open(test_file, "w", encoding="utf-8") as f:
+                f.write("ok")
+            os.remove(test_file)
+            return path
+        except Exception:
+            continue
+    # Last resort
+    path = os.path.join(tempfile.gettempdir(), APP_NAME + "_Logs")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def _build_formatters():
+    file_fmt = logging.Formatter(
+        fmt="%(asctime)s | %(levelname)-8s | %(app)s v%(version)s | %(name)s:%(lineno)d | %(threadName)s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    console_fmt = logging.Formatter(
+        fmt="%(levelname)s | %(name)s:%(lineno)d | %(message)s"
+    )
+    return file_fmt, console_fmt
+
+
+def _start_queue_listener(handlers):
+    q = queue.Queue(-1)
+    qh = QueueHandler(q)
+    listener = QueueListener(q, *handlers, respect_handler_level=True)
+    return qh, listener
+
+
+def _make_file_handlers(log_dir: str):
+    """Main rolling log + separate error log."""
+    global _main_log_path, _err_log_path
+
+    _main_log_path = os.path.join(log_dir, f"{APP_NAME}.log")
+    _err_log_path = os.path.join(log_dir, f"{APP_NAME}.error.log")
+
+    main_fh = RotatingFileHandler(
+        _main_log_path, maxBytes=5_000_000, backupCount=7, encoding="utf-8"
+    )
+    main_fh.setLevel(getattr(logging, ENV_LEVEL, logging.INFO))
+
+    err_fh = RotatingFileHandler(
+        _err_log_path, maxBytes=2_000_000, backupCount=5, encoding="utf-8"
+    )
+    err_fh.setLevel(logging.ERROR)
+
+    return main_fh, err_fh
+
+
+def _make_console_handler():
+    ch = logging.StreamHandler(stream=sys.stderr)
+    ch.setLevel(getattr(logging, ENV_LEVEL, logging.INFO))
+    return ch
+
+
+def init_logging(level: str = ENV_LEVEL):
+    """(Re)initialize logging. Safe to call multiple times."""
+    global logger, queue_listener
+
+    log_dir = _ensure_logs_dir()
+    file_fmt, console_fmt = _build_formatters()
+    main_fh, err_fh = _make_file_handlers(log_dir)
+
+    main_fh.addFilter(AppContextFilter())
+    err_fh.addFilter(AppContextFilter())
+    main_fh.setFormatter(file_fmt)
+    err_fh.setFormatter(file_fmt)
+
+    handlers = [main_fh, err_fh]
+    if ENABLE_CONSOLE:
+        ch = _make_console_handler()
+        ch.addFilter(AppContextFilter())
+        ch.setFormatter(console_fmt)
+        handlers.append(ch)
+
+    qh, listener = _start_queue_listener(handlers)
+
+    base = logging.getLogger(APP_NAME)
+    base.setLevel(getattr(logging, level.upper(), logging.INFO))
+    base.propagate = False
+
+    # Prevent duplicate handlers if re-initialized
+    base.handlers.clear()
+    base.addHandler(qh)
+
+    # Stop a previous listener if any
+    global queue_listener
+    if queue_listener:
+        try:
+            queue_listener.stop()
+        except Exception:
+            pass
+
+    listener.start()
+    queue_listener = listener
+
+    # Provide a module-level logger for backwards compatibility
+    globals()["logger"] = base
+
+    # Hook uncaught exceptions into the log
+    _install_excepthook()
+
+    # Ensure clean shutdown
+    atexit.register(_shutdown_logging)
+
+    base.info("Logging initialized at level %s", level.upper())
+    base.info("Log file: %s", get_log_file_path())
+    base.info("Error log: %s", get_error_log_file_path())
+
+
+def _shutdown_logging():
+    try:
+        if queue_listener:
+            queue_listener.stop()
+    finally:
+        logging.shutdown()
+
+
+def set_level(level: str):
+    """Dynamically change the logging level (e.g., set_level('DEBUG'))."""
+    lvl = getattr(logging, level.upper(), logging.INFO)
+    logging.getLogger(APP_NAME).setLevel(lvl)
+    logger.info("Logging level changed to %s", level.upper())
+
+
+def get_logger(name: Optional[str] = None) -> logging.Logger:
+    """
+    Get a child logger: get_logger(__name__) -> 'DIMCreator.<module>'.
+    Use the module-level 'logger' for the app-wide logger.
+    """
+    if not name:
+        return logging.getLogger(APP_NAME)
+    return logging.getLogger(f"{APP_NAME}.{name}")
+
+
+def get_log_file_path() -> Optional[str]:
+    return _main_log_path
+
+
+def get_error_log_file_path() -> Optional[str]:
+    return _err_log_path
+
+
+def _install_excepthook():
+    """Route uncaught exceptions to the log (and keep default behavior)."""
+    def handle_exception(exc_type, exc_value, exc_traceback):
+        # Avoid logging KeyboardInterrupt as error
+        if issubclass(exc_type, KeyboardInterrupt):
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+            return
+        log = logging.getLogger(APP_NAME)
+        log.exception("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+        # Still print to stderr for visibility in dev
+        try:
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        except Exception:
+            pass
+
+    sys.excepthook = handle_exception
+
+
+# Initialize on import (keeps existing behavior: `from logger_utils import logger`)
+init_logging(ENV_LEVEL)
+logger.info("%s started", APP_NAME)

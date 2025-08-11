@@ -1,3 +1,4 @@
+# settings.py
 import os
 import json
 from PyQt5.QtWidgets import (
@@ -10,8 +11,10 @@ from qfluentwidgets import (
     setTheme, Theme, CheckBox, LineEdit, ToolButton, PushButton, PrimaryPushButton,
     Pivot, FluentIcon as FIF, TableWidget, ListWidget, SubtitleLabel
 )
-
+from logger_utils import get_logger
 from utils import tooltip_stylesheet, label_stylesheet
+
+log = get_logger(__name__)
 
 
 class StoreDataEditor(QWidget):
@@ -78,14 +81,20 @@ class StoreDataEditor(QWidget):
         self.table.selectRow(target_row)
 
     def loadData(self):
-        if os.path.exists(self.config_path):
-            with open(self.config_path, 'r') as f:
+        if not os.path.exists(self.config_path):
+            log.info("StoreData config not found (will be created on save): %s", self.config_path)
+            return
+        try:
+            with open(self.config_path, 'r', encoding="utf-8") as f:
                 data = json.load(f)
             for item in data.get('data', []):
                 row = self.table.rowCount()
                 self.table.insertRow(row)
                 self.table.setItem(row, 0, QTableWidgetItem(item.get('name', '')))
                 self.table.setItem(row, 1, QTableWidgetItem(item.get('prefix', '')))
+            log.info("Loaded store data from %s", self.config_path)
+        except Exception as e:
+            log.error("Failed to load store data from %s: %s", self.config_path, e)
 
     def addRow(self):
         row = self.table.rowCount()
@@ -108,11 +117,16 @@ class StoreDataEditor(QWidget):
             prefix = prefix_item.text().strip() if prefix_item else ""
             if name:
                 items.append({"name": name, "prefix": prefix})
-        with open(self.config_path, 'w') as f:
-            json.dump({"version": 1, "data": items}, f, indent=4)
+        try:
+            with open(self.config_path, 'w', encoding="utf-8") as f:
+                json.dump({"version": 1, "data": items}, f, indent=4)
+            log.info("Saved store data to %s (%d items)", self.config_path, len(items))
+        except Exception as e:
+            log.error("Failed to save store data to %s: %s", self.config_path, e)
 
 
 class SimpleListEditor(QWidget):
+    """Fluent-styled simple list editor (for tags and DAZ folders)."""
     def __init__(self, config_path: str, parent=None):
         super().__init__(parent)
         self.config_path = config_path
@@ -139,11 +153,17 @@ class SimpleListEditor(QWidget):
         self.loadData()
 
     def loadData(self):
-        if os.path.exists(self.config_path):
-            with open(self.config_path, 'r') as f:
+        if not os.path.exists(self.config_path):
+            log.info("List config not found (will be created on save): %s", self.config_path)
+            return
+        try:
+            with open(self.config_path, 'r', encoding="utf-8") as f:
                 data = json.load(f)
             for item in data.get('data', []):
                 self.list_widget.addItem(QListWidgetItem(item))
+            log.info("Loaded list data from %s (%d items)", self.config_path, self.list_widget.count())
+        except Exception as e:
+            log.error("Failed to load list data from %s: %s", self.config_path, e)
 
     def addItem(self):
         text = self.line_edit.text().strip()
@@ -157,8 +177,12 @@ class SimpleListEditor(QWidget):
 
     def saveData(self):
         items = [self.list_widget.item(i).text() for i in range(self.list_widget.count())]
-        with open(self.config_path, 'w') as f:
-            json.dump({"version": 1, "data": items}, f, indent=4)
+        try:
+            with open(self.config_path, 'w', encoding="utf-8") as f:
+                json.dump({"version": 1, "data": items}, f, indent=4)
+            log.info("Saved list data to %s (%d items)", self.config_path, len(items))
+        except Exception as e:
+            log.error("Failed to save list data to %s: %s", self.config_path, e)
 
 
 class SettingsDialog(QDialog):
@@ -174,11 +198,13 @@ class SettingsDialog(QDialog):
 
         main_layout = QVBoxLayout(self)
 
+        # Pivot + Pages
         self.pivot = Pivot(self)
         self.stack = QStackedWidget(self)
         main_layout.addWidget(self.pivot)
         main_layout.addWidget(self.stack)
 
+        # --- General Tab ---
         general_tab = QWidget(objectName="generalTab")
         g_layout = QVBoxLayout(general_tab)
 
@@ -199,6 +225,7 @@ class SettingsDialog(QDialog):
         self.stack.addWidget(general_tab)
         self.pivot.addItem("generalTab", "General")
 
+        # --- Config editors ---
         config_dir = os.path.join(self.doc_main_dir, 'Config')
         os.makedirs(config_dir, exist_ok=True)
 
@@ -217,6 +244,7 @@ class SettingsDialog(QDialog):
         self.stack.addWidget(self.folder_editor)
         self.pivot.addItem("foldersTab", "DAZ Folders")
 
+        # --- Info Tab ---
         info_tab = QWidget(objectName="infoTab")
         info_layout = QVBoxLayout(info_tab)
         info_layout.setSpacing(14)
@@ -227,6 +255,7 @@ class SettingsDialog(QDialog):
             line.setFrameShadow(QFrame.Sunken)
             info_layout.addWidget(line)
 
+        # Top section: About (left) + Links (right)
         top_row = QHBoxLayout()
         top_row.setSpacing(16)
 
@@ -261,7 +290,7 @@ class SettingsDialog(QDialog):
             btn_cls = PrimaryPushButton if primary else PushButton
             btn = btn_cls(safe_icon(icon_name), text, info_tab)
             btn.setToolTip(url)
-            btn.clicked.connect(lambda _=None, u=url: QDesktopServices.openUrl(QUrl(u)))
+            btn.clicked.connect(lambda _=None, u=url: (log.info("Open link: %s", u), QDesktopServices.openUrl(QUrl(u))))
             links_col.addWidget(btn)
 
         add_link("GITHUB", "GitHub", github_url, primary=True)
@@ -276,6 +305,7 @@ class SettingsDialog(QDialog):
 
         add_separator()
 
+        # Credits
         credits_header = SubtitleLabel("Credits (license required)", info_tab)
         credits_header.setWordWrap(True)
         info_layout.addWidget(credits_header)
@@ -291,7 +321,7 @@ class SettingsDialog(QDialog):
         def make_link_button(text: str, url: str):
             btn = PushButton(FIF.LINK, text, info_tab)
             btn.setToolTip(url)
-            btn.clicked.connect(lambda _=None, u=url: QDesktopServices.openUrl(QUrl(u)))
+            btn.clicked.connect(lambda _=None, u=url: (log.info("Open credit link: %s", u), QDesktopServices.openUrl(QUrl(u))))
             return btn
 
         for name, lic, _, url in credits_data:
@@ -303,12 +333,14 @@ class SettingsDialog(QDialog):
         self.stack.addWidget(info_tab)
         self.pivot.addItem("infoTab", "Info")
 
+        # Pivot switching
         self.pivot.currentItemChanged.connect(
             lambda k: self.stack.setCurrentWidget(self.findChild(QWidget, k))
         )
         self.pivot.setCurrentItem("generalTab")
         self.stack.setCurrentWidget(general_tab)
 
+        # Bottom buttons
         button_layout = QHBoxLayout()
         button_layout.addStretch(1)
         self.save_button = PrimaryPushButton("Save", self)
@@ -320,13 +352,20 @@ class SettingsDialog(QDialog):
         self.save_button.clicked.connect(self.accept)
         self.cancel_button.clicked.connect(self.reject)
 
+        log.info("SettingsDialog initialized")
+
     def selectTemplateDir(self):
         dir_path = QFileDialog.getExistingDirectory(self, "Select Template Directory")
         if dir_path:
             self.template_destination_field.setText(dir_path)
+            log.info("Template destination set to: %s", dir_path)
 
     def accept(self):
-        self.store_editor.saveData()
-        self.tag_editor.saveData()
-        self.folder_editor.saveData()
+        try:
+            self.store_editor.saveData()
+            self.tag_editor.saveData()
+            self.folder_editor.saveData()
+            log.info("All settings saved from SettingsDialog")
+        except Exception as e:
+            log.error("Failed to save settings from SettingsDialog: %s", e)
         super().accept()

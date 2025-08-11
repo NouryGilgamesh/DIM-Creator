@@ -31,7 +31,7 @@ from utils import (
     tooltip_stylesheet, label_stylesheet,
     show_warning, show_success, show_error, show_info
 )
-from logger_utils import logger
+from logger_utils import get_logger, set_level
 from widgets import (
     ProductLineEdit, TagSelectionDialog, CustomCompactSpinBox, ImageLabel,
     ZipThread, NameEntryDialog, CustomTreeView, FileExplorer
@@ -39,6 +39,9 @@ from widgets import (
 from config_utils import load_configurations
 from settings import SettingsDialog
 from version import __version__
+
+log = get_logger(__name__)
+log.info("Application starting...")
 
 settings = QSettings("Syst3mApps", "DIMCreator")
 
@@ -89,17 +92,14 @@ class DIMPackageGUI(QWidget):
             temp_dir = tempfile.gettempdir()
             image_path = self.image_label.imagePath
 
-            logger.info("Attempting to delete the temporär Image.")
-            print("Attempting to delete the temporär Image.")
+            log.info("Attempting to delete the temporär Image.")
             if os.path.dirname(image_path) == temp_dir:
                 try:
                     os.remove(image_path)
-                    print(f"Temporary image file deleted: {image_path}")
-                    logger.info(f"Temporary image file deleted: {image_path}")
+                    log.info(f"Temporary image file deleted: {image_path}")
                     self.image_label.removeImage()
                 except OSError as e:
-                    print(f"Error deleting temporary image file: {e}")
-                    logger.error(f"Error deleting temporary image file: {e}")
+                    log.error(f"Error deleting temporary image file: {e}")
 
     def openTagSelectionDialog(self):
         selected_tags = self.product_tags_input.text().split(",")
@@ -309,8 +309,7 @@ class DIMPackageGUI(QWidget):
             self.cleanDIMBuildFolder()
 
     def cleanDIMBuildFolder(self):
-        logger.info("Attempting to clean the DIMBuild folder.")
-        print("Attempting to clean the DIMBuild folder.")
+        log.info("Attempting to clean the DIMBuild folder.")
         for filename in os.listdir(self.dimbuild_dir):
             file_path = os.path.join(self.dimbuild_dir, filename)
             try:
@@ -319,11 +318,9 @@ class DIMPackageGUI(QWidget):
                 elif os.path.isdir(file_path):
                     shutil.rmtree(file_path, onerror=self.handle_remove_readonly)
             except Exception as e:
-                print(f"Failed to clean DIMBuild folder: {e}")
-                logger.error(f"Failed to clean DIMBuild folder: {e}")
+                log.error(f"Failed to clean DIMBuild folder: {e}")
 
-        print("DIMBuild folder successfully cleared.")
-        logger.info("DIMBuild folder successfully cleared.")
+        log.info("DIMBuild folder successfully cleared.")
         content_folder_path = os.path.join(self.dimbuild_dir, "Content")
         if not os.path.exists(content_folder_path):
             os.makedirs(content_folder_path, exist_ok=True)
@@ -335,8 +332,7 @@ class DIMPackageGUI(QWidget):
         func(path)
 
     def clearFields(self):
-        logger.info("Attempting to clear all data.")
-        print("Attempting to clear all data.")
+        log.info("Attempting to clear all data.")
         try:
             self.store_input.setCurrentIndex(0)
             self.product_name_input.clear()
@@ -345,12 +341,10 @@ class DIMPackageGUI(QWidget):
             self.generateGUID()
             self.support_clean_input.setChecked(True)
             self.image_label.loadPlaceholderImage()
-            logger.info("All data successfully cleared.")
-            print("All data successfully cleared.")
+            log.info("All data successfully cleared.")
             show_info(self, "Clearing Successful", "All data successfully cleared.")
         except Exception as e:
-            logger.error(f"Failed to clear all data: {e}")
-            print(f"Failed to clear all data: {e}")
+            log.error(f"Failed to clear all data: {e}")
             show_error(self, "Error", "Failed to clear all data. Please check the logs for more details.")
 
     def contentValidation(self, content_dir):
@@ -403,8 +397,7 @@ class DIMPackageGUI(QWidget):
         def clean_support_directory(content_dir):
             target_dir = os.path.join(content_dir, "Runtime", "Support")
             os.makedirs(target_dir, exist_ok=True)
-            print("Attempting to clean Support Directory.")
-            logger.info("Attempting to clean Support Directory.")
+            log.info("Attempting to clean Support Directory.")
             for filename in os.listdir(target_dir):
                 file_path = os.path.join(target_dir, filename)
                 try:
@@ -413,20 +406,17 @@ class DIMPackageGUI(QWidget):
                     elif os.path.isdir(file_path):
                         shutil.rmtree(file_path)
                 except Exception as e:
-                    print(f"Failed to delete {file_path}. Reason: {e}")
-                    logger.error(f"Failed to delete {file_path}. Reason: {e}")
+                    log.error(f"Failed to delete {file_path}. Reason: {e}")
                     return False
                 
-            print("Support directory successfully cleaned.")
-            logger.info("Support directory successfully cleaned.")
+            log.info("Support directory successfully cleaned.")
             return True
 
         def process_and_paste_image(content_dir, store, sku, product_name, image_path):
             if not image_path:
                 return True
             
-            print("Attempting to generate Product cover.")
-            logger.info("Attempting to generate Product cover.")
+            log.info("Attempting to generate Product cover.")
             try:
                 sanitized_product_name = re.sub(r'[^A-Za-z0-9._-]+', '_', product_name).strip('_')
                 store_formatted = re.sub(r'[^A-Za-z0-9._-]+', '_', store).strip('_')
@@ -441,17 +431,14 @@ class DIMPackageGUI(QWidget):
                         img = img.convert("RGB")
                     img.thumbnail((300, 300), Image.Resampling.LANCZOS)
                     img.save(new_image_path, "JPEG")
-                    print("Product cover successfully generated.")
-                    logger.info("Product cover successfully generated.")
+                    log.info("Product cover successfully generated.")
                 return True
             except Exception as e:
-                print(f"An error occurred while processing the image: {str(e)}")
-                logger.error(f"An error occurred while processing the image: {str(e)}")
+                log.error(f"An error occurred while processing the image: {str(e)}")
                 return False
 
         def create_manifest(content_dir):
-            print("Attempting to generate Product Manifest.")
-            logger.info("Attempting to generate Product Manifest.")
+            log.info("Attempting to generate Product Manifest.")
             try:
                 root = Element('DAZInstallManifest', VERSION="0.1")
                 SubElement(root, 'GlobalID', VALUE=guid)
@@ -466,17 +453,14 @@ class DIMPackageGUI(QWidget):
                 manifest_path = os.path.join(os.path.dirname(content_dir), "Manifest.dsx")
                 with open(manifest_path, "w", encoding="utf-8", newline="\n") as manifest_file:
                     manifest_file.write(xml_str)
-                print("Product Manifest successfully generated.")
-                logger.info("Product Manifest successfully generated.")
+                log.info("Product Manifest successfully generated.")
                 return True
             except Exception as e:
-                print(f"An error occurred while creating the manifest: {str(e)}")
-                logger.error(f"An error occurred while creating the manifest: {str(e)}")
+                log.error(f"An error occurred while creating the manifest: {str(e)}")
                 return False
 
         def create_supplement(content_dir, product_name, product_tags):
-            print("Attempting to generate Product Supplement.")
-            logger.info("Attempting to generate Product Supplement.")
+            log.info("Attempting to generate Product Supplement.")
             try:
                 root = Element('ProductSupplement', VERSION="0.1")
                 SubElement(root, 'ProductName', VALUE=product_name)
@@ -487,12 +471,10 @@ class DIMPackageGUI(QWidget):
                 supplement_path = os.path.join(os.path.dirname(content_dir), "Supplement.dsx")
                 with open(supplement_path, "w", encoding="utf-8", newline="\n") as supplement_file:
                     supplement_file.write(xml_str)
-                print("Product Supplement successfully generated.")
-                logger.info("Product Supplement successfully generated.")
+                log.info("Product Supplement successfully generated.")
                 return True
             except Exception as e:
-                print(f"An error occurred while creating the supplement: {str(e)}")
-                logger.error(f"An error occurred while creating the supplement: {str(e)}")
+                log.error(f"An error occurred while creating the supplement: {str(e)}")
                 return False
 
         def sanitize_product_name(name):
@@ -511,8 +493,7 @@ class DIMPackageGUI(QWidget):
 
             arc_base = os.path.dirname(content_dir)
 
-            print("Attempting to generate the DIM file.")
-            logger.info("Attempting to generate the DIM file.")
+            log.info("Attempting to generate the DIM file.")
 
             files_zipped = 0
             ignore_names = {'.DS_Store', 'Thumbs.db', 'desktop.ini'}
@@ -542,17 +523,14 @@ class DIMPackageGUI(QWidget):
                     zipf.write(supplement_path, "Supplement.dsx")
 
             report_progress(100)
-            logger.info(f"DIM file created at: {zip_path}")
-            print(f"DIM file created at: {zip_path}")
+            log.info(f"DIM file created at: {zip_path}")
 
         if SupportClean and not clean_support_directory(content_dir):
-            print("Failed to clean the Support directory. Exiting.")
-            logger.error("Failed to clean the Support directory. Exiting.")
+            log.error("Failed to clean the Support directory. Exiting.")
             return
 
         if not process_and_paste_image(content_dir, store, sku, product_name, image_path):
-            print("Image processing failed. Skipping manifest and supplement creation.")
-            logger.warning("Image processing failed. Skipping manifest and supplement creation.")
+            log.warning("Image processing failed. Skipping manifest and supplement creation.")
             show_error(self, "Image Processing Failed", "Failed to process the image. Manifest and supplement creation will be skipped.")
         else:
             manifest_created = create_manifest(content_dir)
@@ -571,8 +549,7 @@ class DIMPackageGUI(QWidget):
                 zt.error.connect(lambda _m, *, _zt=zt: _zt.deleteLater())
                 zt.start()
             else:
-                print("Skipping zip creation due to previous errors.")
-                logger.warning("Skipping zip creation due to previous errors.")
+                log.warning("Skipping zip creation due to previous errors.")
                 show_error(self, "DIM Creation Skipped", "Manifest or supplement creation failed. DIM packaging will be skipped.")
         pass
 
@@ -580,7 +557,7 @@ class DIMPackageGUI(QWidget):
         self.progress_ring.setValue(percent)
 
     def onZipError(self, message: str):
-        logger.error(f"ZIP error: {message}")
+        log.error(f"ZIP error: {message}")
         show_error(
             self, "ZIP Error",
             f"An error occurred while creating the archive:<br><small>{message}</small>",
@@ -617,7 +594,7 @@ class DIMPackageGUI(QWidget):
         archive_file_path, _ = QFileDialog.getOpenFileName(self, "Select Archive File", "", "Archive Files (*.zip *.rar *.7z)")
         if archive_file_path:
             self.showExtractionState(True)
-            logger.info("Extraction started...")
+            log.info("Extraction started...")
             self.extractionWorker = ContentExtractionWorker(archive_file_path, set(self.daz_folders), self.content_dir, self.copy_template_files, self.template_destination)
             self.extractionWorker.extractionComplete.connect(self.onExtractionComplete)
             self.extractionWorker.extractionError.connect(self.onExtractionError)
@@ -626,7 +603,7 @@ class DIMPackageGUI(QWidget):
     def dropExtractArchive(self, archive_file_path):
         self._extractionHadError = False
         self.showExtractionState(True)
-        logger.info("Extraction started from TreeView...")
+        log.info("Extraction started from TreeView...")
         self.extractionWorker = ContentExtractionWorker(archive_file_path, set(self.daz_folders), self.content_dir, self.copy_template_files, self.template_destination)
         self.extractionWorker.extractionComplete.connect(self.onExtractionComplete)
         self.extractionWorker.extractionError.connect(self.onExtractionError)
@@ -635,7 +612,7 @@ class DIMPackageGUI(QWidget):
     def onExtractionComplete(self):
         if not self._extractionHadError:
             self.showExtractionState(False, "Extraction completed successfully 😆", success=True)
-            logger.info("Extraction Process completed.")
+            log.info("Extraction Process completed.")
             self.fileExplorer.refresh_view()
 
             if self.extractionWorker.copiedTemplates:
@@ -646,8 +623,7 @@ class DIMPackageGUI(QWidget):
         
     def onExtractionError(self, message):
         self._extractionHadError = True
-        print(f"Extraction Error", message)
-        logger.error(f"Extraction Error: {message}")
+        log.error(f"Extraction Error: {message}")
         self.showExtractionState(False, message, success=False)
         self.extractionWorker = None
 
@@ -679,12 +655,12 @@ class ContentExtractionWorker(QThread):
 
     def run(self):
         with suppress_cmd_window():
-            logger.info(f"Starting extraction of {self.archive_file_path}")
+            log.info(f"Starting extraction of {self.archive_file_path}")
             success = False
             try:
                 temp_dir = tempfile.mkdtemp()
                 patoolib.extract_archive(self.archive_file_path, outdir=temp_dir)
-                logger.info(f"Archive extracted to temporary directory: [{temp_dir}]")
+                log.info(f"Archive extracted to temporary directory: [{temp_dir}]")
 
                 base_paths, embedded_archive_files = self.scanDirectory(temp_dir)
 
@@ -732,16 +708,14 @@ class ContentExtractionWorker(QThread):
             shutil.copy(template_archive_path, target_path)
             template_file = os.path.basename(template_archive_path)
             self.copiedTemplates.append(template_file)
-            logger.info(f"Copied template archive [{template_archive_path}] to [{self.template_destination}]")
-            print(f"Copied template archive [{template_archive_path}] to [{self.template_destination}]")
+            log.info(f"Copied template archive [{template_archive_path}] to [{self.template_destination}]")
         else:
-            logger.info(f"Not copying template file as per user setting.")
-            print(f"Not copying template file as per user setting.")
+            log.info(f"Not copying template file as per user setting.")
         try:
             os.remove(template_archive_path)
-            logger.info(f"Removed template archive from temporary directory: [{template_archive_path}]")
+            log.info(f"Removed template archive from temporary directory: [{template_archive_path}]")
         except Exception as e:
-            logger.error(f"Failed to remove template archive from temporary directory: [{e}]")
+            log.error(f"Failed to remove template archive from temporary directory: [{e}]")
 
     def scanDirectory(self, directory):
         base_paths = set()
@@ -783,7 +757,7 @@ class ContentExtractionWorker(QThread):
                     self.extractionError.emit(msg)
                 return
             finally:
-                logger.info("Cleaning up temporary files from embedded archive extraction.")
+                log.info("Cleaning up temporary files from embedded archive extraction.")
 
 
     def extractRelevantContent(self, directory, base_paths):
@@ -807,8 +781,7 @@ class ContentExtractionWorker(QThread):
                     raise ValueError(f"Unsafe path outside content dir: {rel}")
                 return dst
 
-            logger.info(f"Starting to extract relevant content from [{directory_abs}] with base path [{common_base}]")
-            print(f"Starting to extract relevant content from [{directory_abs}] with base path [{common_base}]")
+            log.info(f"Starting to extract relevant content from [{directory_abs}] with base path [{common_base}]")
 
             for root, dirs, _ in os.walk(directory_abs):
                 if os.path.commonpath([os.path.abspath(root), common_base]) != common_base:
@@ -820,11 +793,11 @@ class ContentExtractionWorker(QThread):
                         dst_dir = _safe_join(self.content_dir, rel_dir)
                         os.makedirs(dst_dir, exist_ok=True)
                     except ValueError as ve:
-                        logger.error(str(ve))
+                        log.error(str(ve))
                         self.extractionError.emit(str(ve))
                         return
                     except Exception as e:
-                        logger.error(f"Failed to create directory [{rel_dir}]: {e}")
+                        log.error(f"Failed to create directory [{rel_dir}]: {e}")
 
             ignore_names = {'.DS_Store', 'Thumbs.db', 'desktop.ini'}
             files_to_copy = []
@@ -836,14 +809,14 @@ class ContentExtractionWorker(QThread):
                         continue
                     src = os.path.join(root, fname)
                     if os.path.islink(src):
-                        logger.warning(f"Skipping symlink: {src}")
+                        log.warning(f"Skipping symlink: {src}")
                         continue
                     rel = os.path.relpath(src, common_base)
                     try:
                         dst = _safe_join(self.content_dir, rel)
                         files_to_copy.append((src, dst))
                     except ValueError as ve:
-                        logger.error(str(ve))
+                        log.error(str(ve))
                         self.extractionError.emit(str(ve))
                         return
 
@@ -852,21 +825,19 @@ class ContentExtractionWorker(QThread):
                 try:
                     os.makedirs(os.path.dirname(dst), exist_ok=True)
                     shutil.copy2(src, dst)
-                    logger.info(f"Copied file [{src}] to [{dst}]")
-                    print(f"Copied file [{src}] to [{dst}]")
+                    log.info(f"Copied file [{src}] to [{dst}]")
                 except Exception as e:
-                    logger.error(f"Failed to copy file [{src}] to [{dst}]: {e}")
+                    log.error(f"Failed to copy file [{src}] to [{dst}]: {e}")
 
             if files_to_copy:
                 from concurrent.futures import ThreadPoolExecutor
                 with ThreadPoolExecutor(max_workers=get_optimal_workers()) as executor:
                     list(executor.map(copy_file, files_to_copy))
 
-            logger.info("Completed extracting relevant content.")
-            print("Completed extracting relevant content.")
+            log.info("Completed extracting relevant content.")
 
         except Exception as e:
-            logger.error(f"Extraction failed: {e}")
+            log.error(f"Extraction failed: {e}")
             try:
                 self.extractionError.emit(str(e))
             except Exception:
