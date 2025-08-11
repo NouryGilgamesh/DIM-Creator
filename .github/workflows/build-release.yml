@@ -52,24 +52,48 @@ jobs:
               --hidden-import qfluentwidgets
           fi
 
+      - name: List outputs (before packaging)
+        shell: pwsh
+        run: |
+          if (Test-Path dist) {
+            Get-ChildItem -Recurse -File dist | Select-Object FullName, Length | Format-Table -AutoSize
+          } else {
+            Write-Host "dist folder not found."
+          }
+
+      - name: Ensure canonical docs in dist
+        shell: pwsh
+        run: |
+          $readme = @("README.md","README.MD","README.txt","README","ReadMe.md") |
+            Where-Object { Test-Path $_ } | Select-Object -First 1
+          if ($readme) {
+            Copy-Item $readme "dist/README.md" -Force
+          }
+
+          $license = @("LICENSE","LICENSE.md","LICENSE.txt","LICENCE","LICENCE.md","LICENCE.txt") |
+            Where-Object { Test-Path $_ } | Select-Object -First 1
+          if ($license) {
+            Copy-Item $license "dist/LICENSE" -Force
+          }
+
       - name: Package ZIP with version + docs
         shell: pwsh
         run: |
-          $ver = $env:GITHUB_REF_NAME
-          if (-not $ver) { $ver = "dev" }
+          $ver = $env:GITHUB_REF_NAME; if (-not $ver) { $ver = "dev" }
 
           if (!(Test-Path "dist/DIM-Creator.exe")) {
-            Write-Error "Executable not found at dist/DIM-Creator.exe"
-            exit 1
+            Get-ChildItem -Recurse -File dist | Select-Object FullName, Length | Format-Table -AutoSize
+            throw "Executable not found at dist/DIM-Creator.exe"
           }
 
-          if (Test-Path "README.md") { Copy-Item "README.md" "dist/README.md" -Force }
-          if (Test-Path "LICENSE")   { Copy-Item "LICENSE"   "dist/LICENSE"   -Force }
+          $items = @("dist/DIM-Creator.exe")
+          if (Test-Path "dist/README.md") { $items += "dist/README.md" }
+          if (Test-Path "dist/LICENSE")   { $items += "dist/LICENSE"   }
 
           $zipPath = "dist/DIM-Creator_${ver}_win-x64.zip"
           if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
 
-          Compress-Archive -Path @("dist/DIM-Creator.exe","dist/README.md","dist/LICENSE") -DestinationPath $zipPath -Force
+          Compress-Archive -Path $items -DestinationPath $zipPath -Force
 
       - name: Upload artifact (CI)
         uses: actions/upload-artifact@v4
