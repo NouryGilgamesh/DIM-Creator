@@ -72,11 +72,10 @@ jobs:
             Where-Object { Test-Path $_ } | Select-Object -First 1
           if ($license) { Copy-Item $license "dist/LICENSE" -Force }
 
-      - name: Package ZIP with version + docs (sanitize name)
+      - name: Package release ZIP (version + docs, sanitized)
         shell: pwsh
         run: |
-          $verRaw = $env:GITHUB_REF_NAME
-          if (-not $verRaw) { $verRaw = "dev" }
+          $verRaw = $env:GITHUB_REF_NAME; if (-not $verRaw) { $verRaw = "dev" }
           $ver = ($verRaw -replace '[^0-9A-Za-z._-]', '_')
 
           if (!(Test-Path "dist/DIM-Creator.exe")) {
@@ -100,14 +99,18 @@ jobs:
           name: dim-creator-exe
           path: dist/DIM-Creator.exe
           if-no-files-found: error
+          retention-days: 14
 
-      - name: Upload artifact (ZIP)
+      - name: Upload artifact (docs-only, optional)
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         uses: actions/upload-artifact@v4
         with:
-          name: dim-creator-zip
-          path: dist/*.zip
-          if-no-files-found: error
+          name: dim-creator-docs
+          path: |
+            dist/README.md
+            dist/LICENSE
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Attach to Release (on tags)
         if: startsWith(github.ref, 'refs/tags/')
