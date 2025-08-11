@@ -66,20 +66,18 @@ jobs:
         run: |
           $readme = @("README.md","README.MD","README.txt","README","ReadMe.md") |
             Where-Object { Test-Path $_ } | Select-Object -First 1
-          if ($readme) {
-            Copy-Item $readme "dist/README.md" -Force
-          }
+          if ($readme) { Copy-Item $readme "dist/README.md" -Force }
 
           $license = @("LICENSE","LICENSE.md","LICENSE.txt","LICENCE","LICENCE.md","LICENCE.txt") |
             Where-Object { Test-Path $_ } | Select-Object -First 1
-          if ($license) {
-            Copy-Item $license "dist/LICENSE" -Force
-          }
+          if ($license) { Copy-Item $license "dist/LICENSE" -Force }
 
-      - name: Package ZIP with version + docs
+      - name: Package ZIP with version + docs (sanitize name)
         shell: pwsh
         run: |
-          $ver = $env:GITHUB_REF_NAME; if (-not $ver) { $ver = "dev" }
+          $verRaw = $env:GITHUB_REF_NAME
+          if (-not $verRaw) { $verRaw = "dev" }
+          $ver = ($verRaw -replace '[^0-9A-Za-z._-]', '_')
 
           if (!(Test-Path "dist/DIM-Creator.exe")) {
             Get-ChildItem -Recurse -File dist | Select-Object FullName, Length | Format-Table -AutoSize
