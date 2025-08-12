@@ -38,6 +38,7 @@ from widgets import (
 )
 from config_utils import load_configurations
 from settings import SettingsDialog
+from updater import UpdateManager
 from version import APP_VERSION
 
 log = get_logger(__name__)
@@ -60,6 +61,8 @@ class DIMPackageGUI(QWidget):
         setTheme(Theme.DARK)
         self.initUI()
         self.loadSettings()
+        self.updater = UpdateManager(self, settings, current_version=APP_VERSION, interval_hours=24)
+        self.updater.schedule_on_startup_if_enabled()
         QTimer.singleShot(0, self.updateSourcePrefixBasedOnStore)
         self._extractionHadError = False
 
@@ -247,6 +250,11 @@ class DIMPackageGUI(QWidget):
         self.fileExplorer = FileExplorer(self.dimbuild_dir, self, dimbuild_dir=self.dimbuild_dir, main_gui=self)
         self.fileExplorer.setGeometry(15, 350, 750, 280)
 
+        self.update_button = ToolButton(FIF.SYNC, self)
+        self.update_button.setGeometry(100, 640, 30, 30)
+        self.update_button.setToolTip("Check for Updates")
+        self.update_button.clicked.connect(lambda: self.updater.manual_check())
+
         self.settings_button = ToolButton(FIF.SETTING, self)
         self.settings_button.setGeometry(60, 640, 30, 30)
         self.settings_button.clicked.connect(self.showSettingsDialog)
@@ -269,13 +277,14 @@ class DIMPackageGUI(QWidget):
         QShortcut(QKeySequence("Ctrl+G"), self, self.generateGUID)
         QShortcut(QKeySequence("Ctrl+Return"), self, self.process)
         QShortcut(QKeySequence("Ctrl+N"), self, self.clearAll)
-        # QShortcut(QKeySequence("Ctrl+T"), self, self.ThemeSwitch)
         # QShortcut(QKeySequence("F1"), self, self.openFAQ)
 
     def showSettingsDialog(self):
         dialog = SettingsDialog(self.doc_main_dir, self)
+
         dialog.copy_templates_checkbox.setChecked(self.copy_template_files)
         dialog.template_destination_field.setText(self.template_destination)
+        dialog.auto_update_checkbox.setChecked(settings.value("auto_update_check", True, type=bool))
 
         if dialog.exec_():
             self.copy_template_files = dialog.copy_templates_checkbox.isChecked()
@@ -283,6 +292,10 @@ class DIMPackageGUI(QWidget):
 
             settings.setValue("copy_template_files", self.copy_template_files)
             settings.setValue("template_destination", self.template_destination)
+
+            auto_enabled = dialog.auto_update_checkbox.isChecked()
+            settings.setValue("auto_update_check", auto_enabled)
+            self.updater.set_auto_enabled(auto_enabled)
 
             self.storeitems, self.store_prefixes, self.available_tags, self.daz_folders = load_configurations(self.doc_main_dir)
             self.store_input.clear()

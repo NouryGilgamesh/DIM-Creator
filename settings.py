@@ -260,8 +260,11 @@ class SettingsDialog(QDialog):
         version_lbl = SubtitleLabel(f"Version: {self.app_version}", info_tab)
         about = SubtitleLabel("A tool for creating DAZ Install Manager packages (DIM).", info_tab)
 
-        for w in (title, version_lbl, about):
-            w.setWordWrap(True)
+        self.auto_update_checkbox = CheckBox("Check for updates on startup", info_tab)
+        self.auto_update_checkbox.setToolTip("If enabled, the app will contact GitHub and notify you when a new release is available.")
+
+        for w in (title, version_lbl, about, self.auto_update_checkbox):
+            w.setWordWrap(True) if hasattr(w, "setWordWrap") else None
             about_col.addWidget(w)
         about_col.addStretch(1)
 
