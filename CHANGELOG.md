@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## v1.1.0 - Unreleased
+## v1.1.0 - 2025-08-12
 ### Added
 - Support for update checks.
   - Automatic update manager that checks for updates in the background and notifies the user.
