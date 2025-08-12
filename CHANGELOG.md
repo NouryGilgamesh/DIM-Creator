@@ -14,9 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Improved version parsing and comparison to normalize tags and handle semantic versions accurately.
+- Configuration update logic now preserves user-modified entries and only appends missing defaults.
+  - Store entries are matched case-insensitively to avoid duplicates (e.g., `RenderHub` vs `renderhub`).
+  - User-defined field values are never overwritten during upgrades; only missing fields from defaults are added.
+  - Order of existing configuration entries is preserved.
+- Editor save routines now correctly store the current configuration version to prevent unnecessary repeated upgrades.
 
 ### Fixed
-
+- Prevented loss of custom store prefixes or tags when upgrading configuration files.
+- Fixed potential crash when configuration `data` field was malformed or of the wrong type.
+- Fixed issue where certain list-type configurations would lose their original ordering after upgrade.
 
 ## v1.0.0 - 2025-08-12
 ### Added

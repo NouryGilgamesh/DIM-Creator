@@ -6,7 +6,6 @@ from logger_utils import get_logger
 
 log = get_logger(__name__)
 
-
 def update_configuration(
     config_path: str,
     default_data: Dict,
@@ -22,22 +21,77 @@ def update_configuration(
             with open(config_path, 'r', encoding="utf-8") as config_file:
                 config_data = json.load(config_file)
 
+            if not isinstance(config_data, dict):
+                log.warning("Invalid config root type in %s; resetting to defaults.", config_path)
+                config_data = {"version": 0, "data": []}
+
             if 'data' not in config_data or not isinstance(config_data.get('version', 0), int):
                 log.warning("Invalid config schema in %s; resetting to defaults.", config_path)
                 config_data = {"version": 0, "data": []}
 
+            if not isinstance(config_data.get('data'), list):
+                log.warning("Invalid 'data' type in %s; resetting data to empty list.", config_path)
+                config_data['data'] = []
+
             old_version = config_data.get('version', 0)
             if old_version < current_version:
                 log.info("Upgrading config %s from v%s to v%s", config_path, old_version, current_version)
+
                 if is_dict:
-                    existing_items = {item['name']: item for item in config_data['data'] if isinstance(item, dict) and 'name' in item}
-                    for item in default_data['data']:
-                        existing_items[item['name']] = item
-                    config_data['data'] = list(existing_items.values())
+                    existing_items_ordered = []
+                    existing_index = {}
+
+                    for item in config_data.get('data', []):
+                        if not isinstance(item, dict) or 'name' not in item:
+                            continue
+                        key = str(item.get('name', '')).strip()
+                        if not key:
+                            continue
+                        norm = key.casefold()
+                        if norm in existing_index:
+                            log.warning("Duplicate store name '%s' ignored (keeping first).", key)
+                            continue
+                        existing_index[norm] = len(existing_items_ordered)
+                        existing_items_ordered.append(item)
+
+                    for def_item in default_data.get('data', []):
+                        if not isinstance(def_item, dict):
+                            continue
+                        key = str(def_item.get('name', '')).strip()
+                        if not key:
+                            continue
+                        norm = key.casefold()
+                        if norm not in existing_index:
+                            existing_index[norm] = len(existing_items_ordered)
+                            existing_items_ordered.append(def_item)
+                        else:
+                            idx = existing_index[norm]
+                            for k, v in def_item.items():
+                                existing_items_ordered[idx].setdefault(k, v)
+
+                    config_data['data'] = existing_items_ordered
+
                 else:
-                    existing_data_set = set(config_data['data']) if isinstance(config_data['data'], list) else set()
-                    default_data_set = set(default_data['data'])
-                    config_data['data'] = list(existing_data_set.union(default_data_set))
+                    user_items = config_data.get('data', [])
+                    if not isinstance(user_items, list):
+                        user_items = []
+
+                    user_norm: List[str] = []
+                    seen = set()
+                    for x in user_items:
+                        s = str(x)
+                        if s not in seen:
+                            seen.add(s)
+                            user_norm.append(s)
+
+                    defaults = default_data.get('data', [])
+                    for x in defaults:
+                        s = str(x)
+                        if s not in seen:
+                            seen.add(s)
+                            user_norm.append(s)
+
+                    config_data['data'] = user_norm
 
                 config_data['version'] = current_version
                 data_updated = True
@@ -61,8 +115,10 @@ def update_configuration(
         try:
             with open(config_path, 'w', encoding="utf-8") as config_file:
                 json.dump(config_data, config_file, indent=4)
-            log.info("Wrote configuration %s (version=%s, items=%s)",
-                     config_path, config_data.get('version'), len(config_data.get('data', [])))
+            log.info(
+                "Wrote configuration %s (version=%s, items=%s)",
+                config_path, config_data.get('version'), len(config_data.get('data', []))
+            )
         except Exception as e:
             log.error("Failed writing %s: %s", config_path, e)
 
@@ -152,17 +208,20 @@ def load_configurations(doc_main_dir: str) -> Tuple[List[str], Dict[str, str], L
         ]
     }
 
-    stores_path = os.path.join(config_path, 'store_data.json')
-    tags_path = os.path.join(config_path, 'product_tags.json')
+    stores_path  = os.path.join(config_path, 'store_data.json')
+    tags_path    = os.path.join(config_path, 'product_tags.json')
     folders_path = os.path.join(config_path, 'daz_folders.json')
 
-    store_items = update_configuration(stores_path, default_store_data, config_version, True)
+    store_items = update_configuration(stores_path,  default_store_data,   config_version, True)
     log.debug("Loaded %d store items", len(store_items))
-    store_names = [item['name'] for item in store_items if isinstance(item, dict) and 'name' in item]
-    store_prefixes = {item['name']: item.get('prefix', '') for item in store_items
+
+    store_names = [item['name'] for item in store_items
+                   if isinstance(item, dict) and 'name' in item]
+    store_prefixes = {item['name']: item.get('prefix', '')
+                      for item in store_items
                       if isinstance(item, dict) and 'name' in item}
 
-    tag_items = update_configuration(tags_path, default_tags, config_version, False)
+    tag_items = update_configuration(tags_path,    default_tags,        config_version, False)
     daz_folder_items = update_configuration(folders_path, default_daz_folders, config_version, False)
 
     tag_items.sort()

@@ -12,7 +12,7 @@ from qfluentwidgets import (
 )
 from logger_utils import get_logger
 from utils import tooltip_stylesheet, label_stylesheet
-from version import APP_VERSION
+from version import APP_VERSION, CONFIG_VERSION
 
 log = get_logger(__name__)
 
@@ -119,7 +119,7 @@ class StoreDataEditor(QWidget):
                 items.append({"name": name, "prefix": prefix})
         try:
             with open(self.config_path, 'w', encoding="utf-8") as f:
-                json.dump({"version": 1, "data": items}, f, indent=4)
+                json.dump({"version": CONFIG_VERSION, "data": items}, f, indent=4)
             log.info("Saved store data to %s (%d items)", self.config_path, len(items))
         except Exception as e:
             log.error("Failed to save store data to %s: %s", self.config_path, e)
@@ -178,7 +178,7 @@ class SimpleListEditor(QWidget):
         items = [self.list_widget.item(i).text() for i in range(self.list_widget.count())]
         try:
             with open(self.config_path, 'w', encoding="utf-8") as f:
-                json.dump({"version": 1, "data": items}, f, indent=4)
+                json.dump({"version": CONFIG_VERSION, "data": items}, f, indent=4)
             log.info("Saved list data to %s (%d items)", self.config_path, len(items))
         except Exception as e:
             log.error("Failed to save list data to %s: %s", self.config_path, e)
