@@ -9,12 +9,12 @@ from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, QTimer, Qt
-from PyQt5.QtWidgets import QTextEdit
+from PyQt5.QtWidgets import QTextBrowser
 from PyQt5.QtGui import QDesktopServices, QFont
 from PyQt5.QtCore import QUrl
 
 from qfluentwidgets import (
-    MessageBoxBase, SubtitleLabel, BodyLabel, PrimaryPushButton, PushButton, CheckBox
+    MessageBoxBase, SubtitleLabel, BodyLabel, CheckBox
 )
 
 from utils import show_error, show_info
@@ -97,7 +97,7 @@ class UpdateDialog(MessageBoxBase):
 
         friendly_date = rel.published_at
         try:
-            dt = datetime.fromisoformat(friendly_date.replace("Z", "+00:00"))
+            dt = datetime.fromisoformat((friendly_date or "").replace("Z", "+00:00"))
             friendly_date = dt.strftime("%d %b %Y • %H:%M UTC")
         except Exception:
             pass
@@ -108,12 +108,15 @@ class UpdateDialog(MessageBoxBase):
         )
         date_line = BodyLabel(f"Published: {friendly_date}", self)
 
-        self.notes = QTextEdit(self)
-        self.notes.setReadOnly(True)
-        self.notes.setAcceptRichText(False)
+        self.notes = QTextBrowser(self)
+        self.notes.setOpenExternalLinks(True)
         self.notes.setFont(QFont("Consolas"))
-        self.notes.setMinimumHeight(260)
-        self.notes.setPlainText(rel.body or "No release notes provided.")
+        self.notes.setMinimumHeight(300)
+        body = rel.body or "No release notes provided."
+        try:
+            self.notes.setMarkdown(body)
+        except Exception:
+            self.notes.setPlainText(body)
 
         self.skipCheck = CheckBox("Skip this version", self)
 
@@ -128,14 +131,11 @@ class UpdateDialog(MessageBoxBase):
         self.yesButton.setText("Open Release Page")
         self.cancelButton.setText("Later")
 
-        self.widget.setMinimumWidth(520)
+        self.widget.setMinimumWidth(560)
 
         self.skipCheck.stateChanged.connect(
             lambda _: setattr(self, "skip_this_version", self.skipCheck.isChecked())
         )
-
-    def _open_release(self):
-        QDesktopServices.openUrl(QUrl(self._rel.html_url or "https://github.com/H1ghSyst3m/DIM-Creator/releases/latest"))
 
 class UpdateManager(QObject):
     checkingChanged = pyqtSignal(bool)
@@ -188,17 +188,21 @@ class UpdateManager(QObject):
 
     def _on_result(self, rel: ReleaseInfo, manual: bool):
         self.settings.setValue("last_update_check_ts", int(time.time()))
+
         if not rel or not rel.tag_name:
             if manual:
                 show_error(self.parent, "Update", "Could not parse release data.")
             return
 
-        ignored = self.settings.value("ignore_version", "", type=str)
-        if ignored and ignored == rel.tag_name:
+        ignored = self.settings.value("ignore_version", "", type=str) or ""
+        if ignored and rel.tag_name == ignored:
             log.info("Latest version %s is currently ignored by user.", rel.tag_name)
             if manual:
                 show_info(self.parent, "Update", f"You’ve chosen to skip {rel.tag_name}.")
             return
+
+        if ignored and is_newer(rel.tag_name, ignored):
+            self.settings.remove("ignore_version")
 
         if is_newer(rel.tag_name, self.current_version):
             self._show_update_dialog(rel)
@@ -213,7 +217,9 @@ class UpdateManager(QObject):
 
     def _show_update_dialog(self, rel: ReleaseInfo):
         dlg = UpdateDialog(self.parent, current_version=self.current_version, rel=rel)
-        if dlg.exec():
+        accepted = dlg.exec()
+        if accepted:
             QDesktopServices.openUrl(QUrl(rel.html_url or "https://github.com/H1ghSyst3m/DIM-Creator/releases/latest"))
+
         if getattr(dlg, "skip_this_version", False):
             self.settings.setValue("ignore_version", rel.tag_name)
