@@ -6,11 +6,8 @@ import tempfile
 import logging
 from logging.handlers import RotatingFileHandler, QueueHandler, QueueListener
 from typing import Optional
+from version import APP_VERSION
 
-try:
-    from version import __version__ as APP_VERSION
-except Exception:
-    APP_VERSION = "unknown"
 
 try:
     from utils import documents_dir

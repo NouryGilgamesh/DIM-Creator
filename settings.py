@@ -12,6 +12,7 @@ from qfluentwidgets import (
 )
 from logger_utils import get_logger
 from utils import tooltip_stylesheet, label_stylesheet
+from version import APP_VERSION
 
 log = get_logger(__name__)
 
@@ -184,11 +185,11 @@ class SimpleListEditor(QWidget):
 
 
 class SettingsDialog(QDialog):
-    def __init__(self, doc_main_dir: str, parent=None, app_version: str = "0.1.0"):
+    def __init__(self, doc_main_dir: str, parent=None):
         super().__init__(parent, Qt.WindowCloseButtonHint)
         setTheme(Theme.DARK)
         self.doc_main_dir = doc_main_dir
-        self.app_version = app_version
+        self.app_version = APP_VERSION
 
         self.setWindowTitle("Settings")
         self.setStyleSheet(tooltip_stylesheet + "SettingsDialog{background: rgb(32, 32, 32)}" + label_stylesheet)

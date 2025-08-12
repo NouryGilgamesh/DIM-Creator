@@ -38,7 +38,7 @@ from widgets import (
 )
 from config_utils import load_configurations
 from settings import SettingsDialog
-from version import __version__
+from version import APP_VERSION
 
 log = get_logger(__name__)
 log.info("Application starting...")
@@ -273,7 +273,7 @@ class DIMPackageGUI(QWidget):
         # QShortcut(QKeySequence("F1"), self, self.openFAQ)
 
     def showSettingsDialog(self):
-        dialog = SettingsDialog(self.doc_main_dir, self, app_version=__version__)
+        dialog = SettingsDialog(self.doc_main_dir, self)
         dialog.copy_templates_checkbox.setChecked(self.copy_template_files)
         dialog.template_destination_field.setText(self.template_destination)
 
