@@ -7,17 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## v1.1.1
 ### Added
-- Support for drag and drop functionality.
-  - Browsers can now accept image files and URLs via drag and drop.
+- Drag and drop support for images.
+  - You can now drag local image files or URLs from browsers directly into the app.
 
 ### Changed
-- Replaced logo with new design.
+- Replaced logo with a new design.
   - Removed old logo assets from the repository.
-  - Added favicon.ico with universal size.
+  - Added `favicon.ico` with a universal size.
 - Improved overall UI consistency and responsiveness.
 
 ### Fixed
-- Fixed extraction error handling to properly close tooltips.
+- Improved extraction error handling to properly close tooltips.
 - Fixed potential crash when accessing tooltip attributes.
 - Fixed issue where common DAZ folders were not scanned case-insensitively.
 - Fixed issue where temporary image files were not deleted on application exit.
