@@ -30,6 +30,6 @@ exe = EXE(
     strip=False,
     upx=True,
     console=False,
-    icon='assets/images/logo/x128.ico',
+    icon='assets/images/logo/favicon.ico',
     runtime_tmpdir=None,
 )
