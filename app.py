@@ -704,8 +704,8 @@ class ContentExtractionWorker(QThread):
                 msg = str(e)
                 if "7z" in msg.lower() or "unrar" in msg.lower():
                     self.extractionError.emit(
-                        "Kein passender Entpacker gefunden (7-Zip oder UnRAR). "
-                        "Bitte installieren und erneut versuchen."
+                        "No suitable extractor found (7-Zip or UnRAR). "
+                        "Please install and try again."
                     )
                 else:
                     self.extractionError.emit(msg)
@@ -763,8 +763,8 @@ class ContentExtractionWorker(QThread):
                 msg = str(e)
                 if "7z" in msg.lower() or "unrar" in msg.lower():
                     self.extractionError.emit(
-                        "Kein passender Entpacker gefunden (7-Zip oder UnRAR). "
-                        "Bitte installieren und erneut versuchen."
+                        "No suitable extractor found (7-Zip or UnRAR). "
+                        "Please install and try again."
                     )
                 else:
                     self.extractionError.emit(msg)
