@@ -80,6 +80,14 @@ class DIMPackageGUI(QWidget):
         settings.setValue("last_destination_folder", self.last_destination_folder)
 
     def closeEvent(self, event):
+        try:
+            if self.stateTooltip:
+                self.stateTooltip.close()
+                self.stateTooltip.deleteLater()
+                self.stateTooltip = None
+        except Exception:
+            pass
+    
         self.saveSettings()
         self.cleanDIMBuildFolder()
         self.cleanUpTemporaryImage()
@@ -643,15 +651,31 @@ class DIMPackageGUI(QWidget):
     def showExtractionState(self, isExtracting, message=None, success=True):
         if isExtracting:
             if self.stateTooltip:
-                self.stateTooltip.close()
+                try:
+                    self.stateTooltip.close()
+                    self.stateTooltip.deleteLater()
+                except Exception:
+                    pass
             self.stateTooltip = StateToolTip('Extracting', 'Please wait...', self)
             self.stateTooltip.move(510, 30)
             self.stateTooltip.show()
-        else:
-            if self.stateTooltip:
-                self.stateTooltip.setContent(message)
-                self.stateTooltip.setState(success)
-                self.stateTooltip = None
+            return
+
+        if self.stateTooltip:
+            try:
+                self.stateTooltip.close()
+                self.stateTooltip.deleteLater()
+            except Exception:
+                pass
+            self.stateTooltip = None
+
+        title = 'Extraction completed' if success else 'Extraction canceled'
+        final_tip = StateToolTip(title, message or ('Done.' if success else 'An error occurred.'), self)
+        final_tip.setState(success)
+        final_tip.move(510, 30)
+        final_tip.show()
+
+        QTimer.singleShot(1800, lambda st=final_tip: (st.close(), st.deleteLater()))
 
 class ContentExtractionWorker(QThread):
     extractionComplete = pyqtSignal()
