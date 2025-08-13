@@ -861,6 +861,8 @@ if __name__ == '__main__':
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
     app = QApplication(sys.argv)
+    logo_path = resource_path(os.path.join("assets", "logo", "favicon.ico"))
+    app.setWindowIcon(QIcon(logo_path))
     ex = DIMPackageGUI()
     ex.show()
     sys.exit(app.exec_())
