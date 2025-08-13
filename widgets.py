@@ -1,5 +1,8 @@
 import os
 import shutil
+import tempfile
+import base64
+
 from PyQt5.QtWidgets import (
     QMessageBox, QWidget, QLabel, QDialog, QVBoxLayout, QFileDialog,
     QCompleter, QHBoxLayout, QFileSystemModel, QShortcut
@@ -7,8 +10,11 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import (
     Qt, QThread, pyqtSignal, QEasingCurve, QUrl, QTimer, QRegularExpression
 )
+from PyQt5.QtNetwork import (
+    QNetworkAccessManager, QNetworkRequest, QNetworkReply
+)
 from PyQt5.QtGui import (
-    QPixmap, QCursor, QDesktopServices, QIcon, QKeySequence,
+    QPixmap, QImage, QCursor, QDesktopServices, QIcon, QKeySequence,
     QIntValidator, QRegularExpressionValidator
 )
 from qfluentwidgets import (
@@ -108,9 +114,11 @@ class ImageLabel(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.imagePath = ""
+        self._ownedTemp = False
         self.defaultText = "Drop Image Here\nOr Click to Select"
         self.placeholder_image_rel = os.path.join('assets', 'images', 'placeholder', 'imageexport.png')
         self.placeholder_max_px = 96
+        self._load_seq = 0
 
         self._is_placeholder = True
         self._orig_pixmap = None
@@ -125,6 +133,8 @@ class ImageLabel(QLabel):
         self.removeImageButton.hide()
 
         self.resetToPlaceholder()
+
+        self._nam = QNetworkAccessManager(self)
 
     def _scaled_for_placeholder(self, pm: QPixmap) -> QPixmap:
         if pm.isNull():
@@ -170,6 +180,7 @@ class ImageLabel(QLabel):
             self._orig_pixmap = None
             self.setText(self.defaultText)
         self.imagePath = ""
+        self._ownedTemp = False
         self.removeImageButton.hide()
 
     def resetToPlaceholder(self):
@@ -184,6 +195,7 @@ class ImageLabel(QLabel):
             self.resetToPlaceholder()
             return
         self.imagePath = path
+        self._ownedTemp = False
         self._orig_pixmap = pm
         self._is_placeholder = False
         self._apply_scaled_pixmap()
@@ -191,6 +203,11 @@ class ImageLabel(QLabel):
         self.updateButtonPosition()
 
     def removeImage(self):
+        try:
+            if self._ownedTemp and self.imagePath and os.path.exists(self.imagePath):
+                os.remove(self.imagePath)
+        except Exception:
+            pass
         self.resetToPlaceholder()
 
     def updateButtonPosition(self):
@@ -199,17 +216,75 @@ class ImageLabel(QLabel):
                                     self.height() - buttonSize.height() - 10)
 
     def dragEnterEvent(self, event):
-        if event.mimeData().hasUrls():
-            url = event.mimeData().urls()[0]
-            filePath = url.toLocalFile().lower()
-            if filePath.endswith(('.png', '.jpg', '.jpeg', '.bmp', '.webp')):
-                event.accept()
-                return
+        md = event.mimeData()
+        if md.hasImage():
+            event.acceptProposedAction()
+            return
+        if md.hasUrls():
+            url = md.urls()[0]
+            if url.isLocalFile():
+                fp = url.toLocalFile().lower()
+                if fp.endswith(('.png', '.jpg', '.jpeg', '.bmp', '.webp')):
+                    event.acceptProposedAction()
+                    return
+            else:
+                scheme = url.scheme().lower()
+                if scheme in ('http', 'https', 'data'):
+                    event.acceptProposedAction()
+                    return
         event.ignore()
 
     def dropEvent(self, event):
-        if event.mimeData().hasUrls():
-            self.setImagePath(event.mimeData().urls()[0].toLocalFile())
+        md = event.mimeData()
+        handled = False
+
+        if md.hasImage():
+            qimg = md.imageData()
+            if isinstance(qimg, QPixmap) and not qimg.isNull():
+                self._adopt_qimage_as_temp(qimg.toImage())
+                handled = True
+            elif isinstance(qimg, QImage) and not qimg.isNull():
+                self._adopt_qimage_as_temp(qimg)
+                handled = True
+
+        if not handled and md.hasUrls():
+            urls = md.urls()
+
+            data_urls = [u for u in urls if u.scheme().lower() == 'data']
+            local_urls = [u for u in urls if u.isLocalFile()]
+            http_urls = [u for u in urls if u.scheme().lower() in ('http', 'https')]
+
+            for u in data_urls:
+                if self._adopt_data_url(u):
+                    handled = True
+                    break
+
+            if not handled:
+                for u in local_urls:
+                    local_path = u.toLocalFile()
+                    try:
+                        sys_tmp = os.path.abspath(tempfile.gettempdir())
+                        if os.path.commonpath([os.path.abspath(local_path), sys_tmp]) == sys_tmp:
+                            self._adopt_local_as_temp(local_path)
+                        else:
+                            self.setImagePath(local_path)
+                        handled = True
+                        break
+                    except Exception:
+                        self._adopt_local_as_temp(local_path)
+                        handled = True
+                        break
+
+            if not handled and http_urls:
+                self._load_seq += 1
+                seq = self._load_seq
+                self._download_first_valid(http_urls, seq)
+                handled = True
+
+        if handled:
+            event.acceptProposedAction()
+        else:
+            event.ignore()
 
     def mousePressEvent(self, event):
         filePath, _ = QFileDialog.getOpenFileName(self, "Select an image", "", "Image Files (*.png *.jpg *.jpeg *.bmp *.webp)")
@@ -226,6 +301,163 @@ class ImageLabel(QLabel):
         self.setCursor(QCursor(Qt.ArrowCursor))
         super().leaveEvent(event)
 
+    def _download_first_valid(self, urls, seq):
+        if not urls:
+            return
+
+        url = urls[0]
+        req = QNetworkRequest(url)
+        reply = self._nam.get(req)
+
+        def _finished():
+            if seq != self._load_seq:
+                reply.deleteLater()
+                return
+
+            try:
+                if reply.error() != QNetworkReply.NoError:
+                    reply.deleteLater()
+                    self._download_first_valid(urls[1:], seq)
+                    return
+
+                data = reply.readAll()
+                pm = QPixmap()
+                if not pm.loadFromData(bytes(data)):
+                    reply.deleteLater()
+                    self._download_first_valid(urls[1:], seq)
+                    return
+
+                fd, temp_path = tempfile.mkstemp(prefix="dimcreator_img_", suffix=".jpg")
+                os.close(fd)
+                pm.toImage().save(temp_path)
+                if seq == self._load_seq:
+                    self._set_owned_temp_path(temp_path)
+                else:
+                    try: os.remove(temp_path)
+                    except Exception: pass
+
+            finally:
+                reply.deleteLater()
+
+        reply.finished.connect(_finished)
+
+
+    def _adopt_qimage_as_temp(self, qimg: QImage, suffix=".png"):
+        try:
+            fd, temp_path = tempfile.mkstemp(prefix="dimcreator_img_", suffix=suffix)
+            os.close(fd)
+            qimg.save(temp_path)
+            self._set_owned_temp_path(temp_path)
+        except Exception:
+            self.resetToPlaceholder()
+
+    def _adopt_local_as_temp(self, src_path: str):
+        try:
+            ext = os.path.splitext(src_path)[1] or ".png"
+            fd, temp_path = tempfile.mkstemp(prefix="dimcreator_img_", suffix=ext)
+            os.close(fd)
+            shutil.copy2(src_path, temp_path)
+            self._set_owned_temp_path(temp_path)
+        except Exception:
+            self.resetToPlaceholder()
+
+    def _set_owned_temp_path(self, temp_path: str):
+        try:
+            if self._ownedTemp and self.imagePath and os.path.exists(self.imagePath):
+                os.remove(self.imagePath)
+        except Exception:
+            pass
+
+        pm = QPixmap(temp_path)
+        if pm.isNull():
+            try:
+                os.remove(temp_path)
+            except Exception:
+                pass
+            self.resetToPlaceholder()
+            return
+
+        self.imagePath = temp_path
+        self._ownedTemp = True
+        self._orig_pixmap = pm
+        self._is_placeholder = False
+        self._apply_scaled_pixmap()
+        self.removeImageButton.show()
+        self.updateButtonPosition()
+
+    def _download_url_to_temp(self, url: QUrl):
+        req = QNetworkRequest(url)
+        reply = self._nam.get(req)
+
+        def _finished():
+            try:
+                if reply.error() != QNetworkReply.NoError:
+                    self.resetToPlaceholder()
+                    reply.deleteLater()
+                    return
+                data = reply.readAll()
+                pm = QPixmap()
+                if not pm.loadFromData(bytes(data)):
+                    self.resetToPlaceholder()
+                    reply.deleteLater()
+                    return
+                fd, temp_path = tempfile.mkstemp(prefix="dimcreator_img_", suffix=".jpg")
+                os.close(fd)
+                img = pm.toImage()
+                img.save(temp_path)
+                self._set_owned_temp_path(temp_path)
+            finally:
+                reply.deleteLater()
+
+        reply.finished.connect(_finished)
+
+    def _adopt_data_url(self, url: QUrl) -> bool:
+        try:
+            s = url.toString()
+            if not s.startswith('data:image/'):
+                return False
+
+            header, data = s.split(',', 1)
+
+            header_parts = header.split(';')
+            mime = header_parts[0][5:]
+            mime_main, _, mime_sub = mime.partition('/')
+
+            unsupported = {'image/svg+xml', 'image/heic', 'image/heif', 'image/tiff'}
+            if mime.lower() in unsupported:
+                return False
+
+            ext_map = {
+                'png': '.png', 'jpeg': '.jpg', 'jpg': '.jpg', 'bmp': '.bmp', 'webp': '.webp', 'gif': '.gif',
+                'x-xbitmap': '.xbm', 'x-xpixmap': '.xpm', 'pbm': '.pbm', 'pgm': '.pgm', 'ppm': '.ppm'
+            }
+            ext = ext_map.get(mime_sub.lower(), '.png')
+
+            is_base64 = any(part.strip().lower() == 'base64' for part in header_parts[1:])
+
+            if is_base64:
+                b = data.strip()
+                pad = len(b) % 4
+                if pad:
+                    b += '=' * (4 - pad)
+                raw = base64.b64decode(b, validate=False)
+            else:
+                raw = QUrl.fromPercentEncoding(data.encode('utf-8'))
+                if not isinstance(raw, (bytes, bytearray)):
+                    raw = bytes(raw)
+
+
+            pm = QPixmap()
+            if not pm.loadFromData(raw):
+                return False
+
+            fd, temp_path = tempfile.mkstemp(prefix="dimcreator_img_", suffix=ext or '.png')
+            os.close(fd)
+            pm.toImage().save(temp_path)
+            self._set_owned_temp_path(temp_path)
+            return True
+        except Exception:
+            return False
 
 class ZipThread(QThread):
     finished = pyqtSignal()
