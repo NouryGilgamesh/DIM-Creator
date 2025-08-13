@@ -1,111 +1,173 @@
 # DIM-Creator
 
-*A fast, cross-platform PyQt5 app for creating, packaging, and managing DAZ Install Manager (DIM) packages.*
+*A fast PyQt5 app for creating, packaging, and managing DAZ Install Manager (DIM) packages.*
 
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
 ![PyQt5](https://img.shields.io/badge/GUI-PyQt5-brightgreen)
 ![OS](https://img.shields.io/badge/OS-Windows-lightgrey)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-orange.svg)](LICENSE)
+[![Total Downloads](https://img.shields.io/github/downloads/H1ghSyst3m/DIM-Creator/total)](https://github.com/H1ghSyst3m/DIM-Creator/releases)
+[![Latest Release Downloads](https://img.shields.io/github/downloads/H1ghSyst3m/DIM-Creator/latest/total)](https://github.com/H1ghSyst3m/DIM-Creator/releases/latest)
 
-DIM-Creator helps you prepare content, generate manifests, attach product imagery, and bundle everything into a ready-to-install DIM `.zip`—without wrestling with folder structures or manual XML.
+**DIM-Creator** stages DAZ Studio content, generates the required DIM XML files, adds a cover image, and bundles everything into a ready-to-install DIM `.zip`—without the tedious manual setup.
 
 ---
 
 ## Table of Contents
+- [Overview](#overview)
 - [Features](#features)
-- [Requirements](#requirements)
-- [Installation](#installation)
+- [System Requirements](#system-requirements)
+- [Download & Install (EXE)](#download--install-exe)
+- [Run from Source](#run-from-source)
 - [Quick Start](#quick-start)
-- [Usage Details](#usage-details)
+- [How Packaging Works](#how-packaging-works)
+- [Workflows](#workflows)
+- [Configuration & Data Paths](#configuration--data-paths)
+- [Keyboard Shortcuts](#keyboard-shortcuts)
+- [Troubleshooting](#troubleshooting)
 - [Screenshots](#screenshots)
 - [Contributing](#contributing)
 - [License](#license)
 
 ---
 
-<a id="features"></a>
-## ✨ Features
-- **One-click DIM Packages** — Build DIM-ready `.zip` archives with manifests and supplements.
-- **Drag & Drop** — Add files or archives directly into your project.
-- **Integrated File Explorer** — Browse, rename, copy, move, and delete inside the workspace.
-- **Image Handling** — Add, preview, and process product images for DIM metadata.
-- **Content Validation** — Detect and guide the DAZ Studio content folder layout.
-- **Archive Extraction** — Import from `.zip`, `.rar`, and `.7z` (external tools required, see below).
-- **Presets** — Apply store prefixes and tags with one click.
+## Overview
+
+### What is it?
+A desktop app (PyQt5 + qfluentwidgets) that builds **DAZ Install Manager (DIM)** packages.
+
+### Who is it for?
+DAZ Studio users, creators, and vendors who want fast, repeatable, and tidy DIM packages—with correct folder layout, a cover image, and the required XML manifests.
 
 ---
 
-<a id="requirements"></a>
-## ✅ Requirements
-- **Python** 3.9 or newer
-- **PyQt5** (installed via `requirements.txt`)
-- **External extractors** (only needed if you import `.rar`/`.7z`):
-  - **7-Zip** or **UnRAR** installed and available in your system `PATH`
+## Features
 
-> Tip: On Windows, installing [7-Zip](https://www.7-zip.org/) and checking “Add to PATH” simplifies `.7z`/`.rar` imports.
+- **Make DIM packages in seconds** — just point to your files or an archive and click Generate.
+- **Drag & drop file management** — organize your content without leaving the app.
+- **Automatic folder detection** — files are placed where DIM expects them.
+- **Cover art made easy** — drop an image and it’s formatted for DIM automatically.
+- **Warnings before mistakes** — get notified about layout problems before packaging.
+- **Store & tag presets** — save time with one-click product metadata.
+- **Keeps your presets across updates** — your custom stores and tags won’t vanish after upgrading.
+- **Works without Python** — available as a ready-to-run Windows `.exe`.
 
 ---
 
-<a id="installation"></a>
-## 🛠 Installation
+## System Requirements
+
+- **OS:** Windows (officially supported)
+- **Python:** 3.9+ (only needed when running from source)
+- **External extractors** (for `.rar` / `.7z`):
+  - **7-Zip** or **UnRAR** must be installed and available in your system `PATH`
+
+> Tip: Installing [7-Zip](https://www.7-zip.org/) and enabling “Add to PATH” makes `.7z`/`.rar` imports work out of the box.
+
+---
+
+## Download & Install (EXE)
+
+1. Download the latest release from **GitHub Releases**.
+2. Unzip and run `DIMCreator.exe` — no Python environment required.
+
+If SmartScreen warns about an unknown publisher, choose **More info → Run anyway**.
+
+---
+
+## Run from Source
+
 ```bash
-# 1) Clone the repository
-git clone <your-repo-url>
+git clone https://github.com/H1ghSyst3m/DIM-Creator.git
 cd DIM-Creator
-
-# 2) Install dependencies
+python -m venv .venv
+. .venv/Scripts/activate  # Windows
 pip install -r requirements.txt
-```
-
----
-
-<a id="quick-start"></a>
-## 🚀 Quick Start
-```bash
 python app.py
 ```
 
-1. Select your **store** and fill in **product info**.  
-2. (Optional) Add a **product image**.  
-3. Drag & drop a **content folder** or **import an archive** (`.zip`, `.rar`, `.7z`).  
-4. Click **Generate** to create your DIM package.
+---
 
-The finished package `.zip` will appear in your configured **output path**.
+## Quick Start
+
+1. Launch the app — your workspace is `Documents/DIMCreator/DIMBuild/Content`.
+2. Pick your store, fill in product name/SKU, and (optional) add a cover image.
+3. Add content by dragging it in or importing an archive.
+4. Click **Generate** to create your DIM-ready `.zip`.
 
 ---
 
-<a id="usage-details"></a>
-## 📚 Usage Details
-- **Stores & Tags**: Use presets to automatically prefix product IDs and apply tags.  
-- **Images**: Drop in a cover image to include product art in your DIM metadata.  
-- **Content Validation**: The app checks for standard DAZ content structure and will warn about common issues.  
-- **Settings**: Configure template archive copying, output directories, and default behavior.  
-- **Logs**: Open the log panel (or file) if something doesn’t work as expected.
+## How Packaging Works
+
+- Your content folder becomes the installable DIM package.
+- The app adds DIM’s required metadata files.
+- A properly sized cover image is included.
+- The result is a single, ready-to-install `.zip`.
 
 ---
 
-<a id="screenshots"></a>
-## 📷 Screenshots
+## Workflows
+
+### From a folder
+1. Put your DAZ content into `DIMBuild/Content`.
+2. Fill in details → Generate.
+
+### From an archive
+1. Import `.zip`, `.rar`, or `.7z`.
+2. The app extracts only the correct DAZ folders.
+3. Fill in details → Generate.
+
+---
+
+## Configuration & Data Paths
+
+- **Workspace:** `Documents/DIMCreator/DIMBuild/Content`
+- **Logs:** `Documents/DIMCreator/Logs`
+- **Config Files:** `Documents/DIMCreator/Config/` (stores, tags, DAZ folder list)
+
+Your custom settings and presets are preserved after updates.
+
+---
+
+## Keyboard Shortcuts
+
+### Main window
+- `Ctrl+G` — Generate GUID
+- `Ctrl+Enter` — Generate DIM package
+- `Ctrl+N` — Clear fields and clean workspace
+
+### File Explorer
+- `Ctrl+E` — Open in Explorer
+- `Delete` — Delete selected item
+- `Ctrl+C` / `Ctrl+X` / `Ctrl+V` — Copy / Cut / Paste
+- `F2` — Rename
+- `F5` — Refresh
+
+---
+
+## Troubleshooting
+
+- **“.rar/.7z not extracting”** → Install **7-Zip** or **UnRAR** and add to `PATH`.
+- **No DAZ folders found** → Content should start with folders like `data`, `People`, `Runtime`.
+- **SmartScreen warning** → Allow the app via “More info → Run anyway”.
+
+---
+
+## Screenshots
 
 <p align="center">
-   <img width="781" height="721" alt="DIM-Creator main window" src="https://github.com/user-attachments/assets/4d8c9832-72c0-48c0-87dc-4c4f3d0a8897" />
+  <img width="781" height="721" alt="DIM-Creator main window" src="https://github.com/user-attachments/assets/4d8c9832-72c0-48c0-87dc-4c4f3d0a8897" />
 </p>
 
 ---
 
-<a id="contributing"></a>
-## 🤝 Contributing
+## Contributing
+
 Contributions are welcome!  
-Feel free to open issues for bugs or enhancement ideas. For pull requests, please:
-1. Create a feature branch.
-2. Keep commits focused and well-described.
-3. Add or update tests/docs when relevant.
+Open issues for bugs or ideas. PRs should use feature branches and focused commits.
 
 ---
 
-<a id="license"></a>
-## 📜 License
-This project is licensed under the **GNU General Public License v3.0**.  
-See the [LICENSE](LICENSE) file for full details.
+## License
 
+GNU GPL v3 — see [LICENSE](LICENSE).  
 <sub>“DAZ” and “DAZ Install Manager” are trademarks of their respective owners. This project is not affiliated with or endorsed by DAZ 3D.</sub>
