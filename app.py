@@ -684,7 +684,7 @@ class ContentExtractionWorker(QThread):
     def __init__(self, archive_file_path, daz_folders, content_dir, copy_template_files, template_destination):
         super(ContentExtractionWorker, self).__init__()
         self.archive_file_path = archive_file_path
-        self.daz_folders = daz_folders
+        self.daz_folders = {s.casefold() for s in daz_folders}
         self.content_dir = content_dir
         self.copy_template_files = copy_template_files
         self.template_destination = template_destination or downloads_dir()
@@ -757,18 +757,23 @@ class ContentExtractionWorker(QThread):
     def scanDirectory(self, directory):
         base_paths = set()
         embedded_archive_files = []
-        for root, dirs, files in os.walk(directory):
-            for file in files:
-                file_path = os.path.join(root, file)
-                if file.endswith(('.zip', '.rar', '.7z')):
-                    embedded_archive_files.append(file_path)
-                else:
-                    path_segments = os.path.relpath(file_path, start=directory).split(os.sep)
-                    for segment in path_segments:
-                        if segment in self.daz_folders:
-                            base_path = os.sep.join(path_segments[:path_segments.index(segment)])
-                            base_paths.add(base_path)
-                            break
+
+        for root, _, files in os.walk(directory):
+            for fname in files:
+                fpath = os.path.join(root, fname)
+                lower = fname.casefold()
+
+                if lower.endswith(('.zip', '.rar', '.7z')):
+                    embedded_archive_files.append(fpath)
+                    continue
+
+                rel = os.path.relpath(fpath, start=directory)
+                parts = rel.split(os.sep)
+                for i, segment in enumerate(parts):
+                    if segment.casefold() in self.daz_folders:
+                        base_paths.add(os.sep.join(parts[:i]))
+                        break
+
         return base_paths, embedded_archive_files
 
     def processEmbeddedArchive(self, embedded_archive_path, base_paths):
