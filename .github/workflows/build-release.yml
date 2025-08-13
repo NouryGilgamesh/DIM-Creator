@@ -20,6 +20,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Verify APP_VERSION matches the tag
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"        # e.g. v1.1.1
+          TAG_VER="${TAG#v}"              # remove leading "v"
+
+          FILE="version.py"
+          if [ ! -f "$FILE" ]; then
+            echo "ERROR: $FILE not found"
+            exit 1
+          fi
+
+          APP_VER="$(awk -F\" '/APP_VERSION *=/ {print $2}' "$FILE")"
+
+          echo "Tag version:  $TAG_VER"
+          echo "App version:  $APP_VER"
+
+          if [ -z "$APP_VER" ]; then
+            echo "ERROR: APP_VERSION not found in $FILE"
+            exit 1
+          fi
+
+          if [ "$TAG_VER" != "$APP_VER" ]; then
+            echo "ERROR: Tag version ($TAG_VER) does not match APP_VERSION ($APP_VER)"
+            exit 1
+          fi
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
