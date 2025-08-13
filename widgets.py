@@ -118,6 +118,7 @@ class ImageLabel(QLabel):
         self.defaultText = "Drop Image Here\nOr Click to Select"
         self.placeholder_image_rel = os.path.join('assets', 'images', 'placeholder', 'imageexport.png')
         self.placeholder_max_px = 96
+        self._load_seq = 0
 
         self._is_placeholder = True
         self._orig_pixmap = None
@@ -247,9 +248,20 @@ class ImageLabel(QLabel):
                 handled = True
 
         if not handled and md.hasUrls():
-            for url in md.urls():
-                if url.isLocalFile():
-                    local_path = url.toLocalFile()
+            urls = md.urls()
+
+            data_urls = [u for u in urls if u.scheme().lower() == 'data']
+            local_urls = [u for u in urls if u.isLocalFile()]
+            http_urls = [u for u in urls if u.scheme().lower() in ('http', 'https')]
+
+            for u in data_urls:
+                if self._adopt_data_url(u):
+                    handled = True
+                    break
+
+            if not handled:
+                for u in local_urls:
+                    local_path = u.toLocalFile()
                     try:
                         sys_tmp = os.path.abspath(tempfile.gettempdir())
                         if os.path.commonpath([os.path.abspath(local_path), sys_tmp]) == sys_tmp:
@@ -262,16 +274,12 @@ class ImageLabel(QLabel):
                         self._adopt_local_as_temp(local_path)
                         handled = True
                         break
-                else:
-                    scheme = url.scheme().lower()
-                    if scheme in ('http', 'https'):
-                        self._download_url_to_temp(url)
-                        handled = True
-                        break
-                    if scheme == 'data':
-                        if self._adopt_data_url(url):
-                            handled = True
-                            break
+
+            if not handled and http_urls:
+                self._load_seq += 1
+                seq = self._load_seq
+                self._download_first_valid(http_urls, seq)
+                handled = True
 
         if handled:
             event.acceptProposedAction()
@@ -292,6 +300,47 @@ class ImageLabel(QLabel):
         self.setStyleSheet(self.originalStyleSheet)
         self.setCursor(QCursor(Qt.ArrowCursor))
         super().leaveEvent(event)
+
+    def _download_first_valid(self, urls, seq):
+        if not urls:
+            return
+
+        url = urls[0]
+        req = QNetworkRequest(url)
+        reply = self._nam.get(req)
+
+        def _finished():
+            if seq != self._load_seq:
+                reply.deleteLater()
+                return
+
+            try:
+                if reply.error() != QNetworkReply.NoError:
+                    reply.deleteLater()
+                    self._download_first_valid(urls[1:], seq)
+                    return
+
+                data = reply.readAll()
+                pm = QPixmap()
+                if not pm.loadFromData(bytes(data)):
+                    reply.deleteLater()
+                    self._download_first_valid(urls[1:], seq)
+                    return
+
+                fd, temp_path = tempfile.mkstemp(prefix="dimcreator_img_", suffix=".jpg")
+                os.close(fd)
+                pm.toImage().save(temp_path)
+                if seq == self._load_seq:
+                    self._set_owned_temp_path(temp_path)
+                else:
+                    try: os.remove(temp_path)
+                    except Exception: pass
+
+            finally:
+                reply.deleteLater()
+
+        reply.finished.connect(_finished)
+
 
     def _adopt_qimage_as_temp(self, qimg: QImage, suffix=".png"):
         try:
@@ -367,18 +416,42 @@ class ImageLabel(QLabel):
             s = url.toString()
             if not s.startswith('data:image/'):
                 return False
-            header, b64 = s.split(',', 1)
-            ext = '.png'
-            if ';base64' in header:
-                raw = base64.b64decode(b64)
+
+            header, data = s.split(',', 1)
+
+            header_parts = header.split(';')
+            mime = header_parts[0][5:]
+            mime_main, _, mime_sub = mime.partition('/')
+
+            unsupported = {'image/svg+xml', 'image/heic', 'image/heif', 'image/tiff'}
+            if mime.lower() in unsupported:
+                return False
+
+            ext_map = {
+                'png': '.png', 'jpeg': '.jpg', 'jpg': '.jpg', 'bmp': '.bmp', 'webp': '.webp', 'gif': '.gif',
+                'x-xbitmap': '.xbm', 'x-xpixmap': '.xpm', 'pbm': '.pbm', 'pgm': '.pgm', 'ppm': '.ppm'
+            }
+            ext = ext_map.get(mime_sub.lower(), '.png')
+
+            is_base64 = any(part.strip().lower() == 'base64' for part in header_parts[1:])
+
+            if is_base64:
+                b = data.strip()
+                pad = len(b) % 4
+                if pad:
+                    b += '=' * (4 - pad)
+                raw = base64.b64decode(b, validate=False)
             else:
-                raw = QUrl.fromPercentEncoding(b64.encode('utf-8'))
-                if isinstance(raw, bytes):
+                raw = QUrl.fromPercentEncoding(data.encode('utf-8'))
+                if not isinstance(raw, (bytes, bytearray)):
                     raw = bytes(raw)
+
+
             pm = QPixmap()
             if not pm.loadFromData(raw):
                 return False
-            fd, temp_path = tempfile.mkstemp(prefix="dimcreator_img_", suffix=ext)
+
+            fd, temp_path = tempfile.mkstemp(prefix="dimcreator_img_", suffix=ext or '.png')
             os.close(fd)
             pm.toImage().save(temp_path)
             self._set_owned_temp_path(temp_path)
