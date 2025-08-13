@@ -14,7 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added favicon.ico with universal size.
 
 ### Fixed
-
+- Fixed extraction error handling to properly close tooltips.
+- Fixed potential crash when accessing tooltip attributes.
+- Fixed issue where common DAZ folders were not scanned case-insensitively.
 
 ## v1.1.0 - 2025-08-12
 ### Added
