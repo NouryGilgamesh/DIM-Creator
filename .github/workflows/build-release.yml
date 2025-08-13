@@ -48,7 +48,7 @@ jobs:
               --noconfirm --onefile --noconsole \
               --name DIM-Creator \
               --add-data "assets;assets" \
-              --icon "assets/images/logo/x128.ico" \
+              --icon "assets/images/logo/favicon.ico" \
               --hidden-import qfluentwidgets
           fi
 

@@ -48,7 +48,7 @@ settings = QSettings("Syst3mApps", "DIMCreator")
 
 documents_path = documents_dir()
 doc_main_dir = DOC_MAIN_DIR
-logo_path = resource_path(os.path.join('assets', 'images', 'logo', 'x128.ico'))
+logo_path = resource_path(os.path.join('assets', 'images', 'logo', 'favicon.ico'))
 
 class DIMPackageGUI(QWidget):
     def __init__(self):
