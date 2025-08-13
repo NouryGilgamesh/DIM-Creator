@@ -645,37 +645,47 @@ class DIMPackageGUI(QWidget):
     def onExtractionError(self, message):
         self._extractionHadError = True
         log.error(f"Extraction Error: {message}")
-        self.showExtractionState(False, message, success=False)
-        self.extractionWorker = None
-
-    def showExtractionState(self, isExtracting, message=None, success=True):
-        if isExtracting:
-            if self.stateTooltip:
-                try:
-                    self.stateTooltip.close()
-                    self.stateTooltip.deleteLater()
-                except Exception:
-                    pass
-            self.stateTooltip = StateToolTip('Extracting', 'Please wait...', self)
-            self.stateTooltip.move(510, 30)
-            self.stateTooltip.show()
-            return
-
         if self.stateTooltip:
             try:
                 self.stateTooltip.close()
-                self.stateTooltip.deleteLater()
             except Exception:
                 pass
             self.stateTooltip = None
+        show_error(self, "Extraction failed", message, Qt.Vertical, InfoBarPosition.BOTTOM_RIGHT, True, 3000)
+        self.extractionWorker = None
+
+    def _close_tip(self, tip_attr):
+        tip = getattr(self, tip_attr, None)
+        if tip:
+            try:
+                tip.close()
+            except Exception:
+                pass
+            setattr(self, tip_attr, None)
+
+    def showExtractionState(self, isExtracting, message=None, success=True):
+        if isExtracting:
+            self._close_tip("stateTooltip")
+            tip = StateToolTip('Extracting', 'Please wait...', self)
+            tip.move(510, 30)
+            tip.setAttribute(Qt.WA_DeleteOnClose, True)
+            tip.show()
+            self.stateTooltip = tip
+            return
+
+        self._close_tip("stateTooltip")
+        self._close_tip("_finalTip")
 
         title = 'Extraction completed' if success else 'Extraction canceled'
         final_tip = StateToolTip(title, message or ('Done.' if success else 'An error occurred.'), self)
         final_tip.setState(success)
         final_tip.move(510, 30)
+        final_tip.setAttribute(Qt.WA_DeleteOnClose, True)
         final_tip.show()
 
-        QTimer.singleShot(1800, lambda st=final_tip: (st.close(), st.deleteLater()))
+        self._finalTip = final_tip
+        QTimer.singleShot(1800, lambda: (final_tip.close(), setattr(self, "_finalTip", None)))
+
 
 class ContentExtractionWorker(QThread):
     extractionComplete = pyqtSignal()
