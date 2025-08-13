@@ -53,7 +53,6 @@ logo_path = resource_path(os.path.join('assets', 'images', 'logo', 'favicon.ico'
 class DIMPackageGUI(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowIcon(QIcon(logo_path))
         self.doc_main_dir = doc_main_dir
         self.storeitems, self.store_prefixes, self.available_tags, self.daz_folders = load_configurations(self.doc_main_dir)
         self.stateTooltip = None
@@ -861,9 +860,8 @@ if __name__ == '__main__':
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
     app = QApplication(sys.argv)
-    logo_path = resource_path(os.path.join("assets", "images", "logo", "favicon.ico"))
     app.setWindowIcon(QIcon(logo_path))
     ex = DIMPackageGUI()
     ex.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
