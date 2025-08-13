@@ -9,6 +9,7 @@ import uuid
 import re
 import subprocess
 import patoolib
+import ctypes
 
 if sys.stdout is None:
     sys.stdout = open(os.devnull, "w")
@@ -857,9 +858,16 @@ class ContentExtractionWorker(QThread):
 
 
 if __name__ == '__main__':
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Syst3mApps.DIMCreator")
+    except Exception:
+        pass
+
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
     app = QApplication(sys.argv)
+    app.setOrganizationName("Syst3mApps")
+    app.setApplicationName("DIMCreator")
     app.setWindowIcon(QIcon(logo_path))
     ex = DIMPackageGUI()
     ex.show()
