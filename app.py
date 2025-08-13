@@ -99,18 +99,18 @@ class DIMPackageGUI(QWidget):
         os.makedirs(self.content_dir, exist_ok=True)
 
     def cleanUpTemporaryImage(self):
-        if hasattr(self, 'image_label') and self.image_label.imagePath:
-            temp_dir = tempfile.gettempdir()
-            image_path = self.image_label.imagePath
-
-            log.info("Attempting to delete the temporär Image.")
-            if os.path.dirname(image_path) == temp_dir:
-                try:
-                    os.remove(image_path)
-                    log.info(f"Temporary image file deleted: {image_path}")
-                    self.image_label.removeImage()
-                except OSError as e:
-                    log.error(f"Error deleting temporary image file: {e}")
+        try:
+            if getattr(self, 'image_label', None) and self.image_label.imagePath:
+                if getattr(self.image_label, "_ownedTemp", False):
+                    image_path = self.image_label.imagePath
+                    try:
+                        os.remove(image_path)
+                        log.info(f"Temporary image file deleted: {image_path}")
+                    except OSError as e:
+                        log.error(f"Error deleting temporary image file '{image_path}': {e}")
+                self.image_label.removeImage()
+        except Exception as e:
+            log.error(f"cleanUpTemporaryImage failed: {e}")
 
     def openTagSelectionDialog(self):
         selected_tags = self.product_tags_input.text().split(",")
@@ -241,7 +241,7 @@ class DIMPackageGUI(QWidget):
         self.process_button.clicked.connect(self.process)
         self.process_button.setToolTip("Click to start the DIM package creation process.")
 
-        self.clear_button =  ToolButton(FIF.ERASE_TOOL, self)
+        self.clear_button = ToolButton(FIF.ERASE_TOOL, self)
         self.clear_button.setGeometry(350, 300, 30, 30)
         self.clear_button.clicked.connect(self.clearAll)
         self.clear_button.setToolTip("Clear all input fields and clean the DIMBuild folder.")
