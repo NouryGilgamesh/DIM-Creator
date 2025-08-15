@@ -5,6 +5,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+
+## v1.1.2
+### Added
+
+### Changed
+- Manifest generation now sorts directories and files to ensure deterministic output.  
+
+### Fixed
+- Support directory cleanup is now more robust:
+  - Handles read-only files by forcing writable permissions before deletion.
+  - Uses a safe fallback for stubborn files and folders to avoid cleanup failures.
+
 ## v1.1.1 - 2025-08-13
 ### Added
 - Drag and drop support for images.
