@@ -419,17 +419,26 @@ class DIMPackageGUI(QWidget):
             target_dir = os.path.join(content_dir, "Runtime", "Support")
             os.makedirs(target_dir, exist_ok=True)
             log.info("Attempting to clean Support Directory.")
-            for filename in os.listdir(target_dir):
-                file_path = os.path.join(target_dir, filename)
+
+            def handle_remove_readonly(func, path, exc_info):
                 try:
-                    if os.path.isfile(file_path) or os.path.islink(file_path):
-                        os.unlink(file_path)
-                    elif os.path.isdir(file_path):
-                        shutil.rmtree(file_path)
+                    os.chmod(path, stat.S_IWRITE)
+                    func(path)
                 except Exception as e:
-                    log.error(f"Failed to delete {file_path}. Reason: {e}")
+                    log.error(f"Still failed to delete {path}. Reason: {e}")
+
+            for name in os.listdir(target_dir):
+                p = os.path.join(target_dir, name)
+                try:
+                    if os.path.isfile(p) or os.path.islink(p):
+                        os.chmod(p, stat.S_IWRITE)
+                        os.unlink(p)
+                    elif os.path.isdir(p):
+                        shutil.rmtree(p, onerror=handle_remove_readonly)
+                except Exception as e:
+                    log.error(f"Failed to delete {p}. Reason: {e}")
                     return False
-                
+
             log.info("Support directory successfully cleaned.")
             return True
 
