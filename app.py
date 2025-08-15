@@ -463,17 +463,19 @@ class DIMPackageGUI(QWidget):
             try:
                 root = Element('DAZInstallManifest', VERSION="0.1")
                 SubElement(root, 'GlobalID', VALUE=guid)
-                
+
                 for subdir, dirs, files in os.walk(content_dir):
+                    dirs.sort()
+                    files.sort()
                     for file in files:
                         file_path = os.path.join(subdir, file).replace("\\", "/")
                         rel_path = os.path.relpath(file_path, start=content_dir).replace("\\", "/")
                         SubElement(root, 'File', TARGET="Content", ACTION="Install", VALUE=f"Content/{rel_path}")
-                
+
                 xml_str = prettify(root)
                 manifest_path = os.path.join(os.path.dirname(content_dir), "Manifest.dsx")
-                with open(manifest_path, "w", encoding="utf-8", newline="\n") as manifest_file:
-                    manifest_file.write(xml_str)
+                with open(manifest_path, "w", encoding="utf-8", newline="\n") as mf:
+                    mf.write(xml_str)
                 log.info("Product Manifest successfully generated.")
                 return True
             except Exception as e:
