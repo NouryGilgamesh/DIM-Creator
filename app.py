@@ -85,17 +85,50 @@ class DIMPackageGUI(QWidget):
 
     def closeEvent(self, event):
         try:
-            if self.stateTooltip:
-                self.stateTooltip.close()
-                self.stateTooltip.deleteLater()
-                self.stateTooltip = None
+            self.process_button.setEnabled(False)
+            self.extract_button.setEnabled(False)
         except Exception:
             pass
-    
+
+        try:
+            for attr in ("stateTooltip", "_finalTip"):
+                tip = getattr(self, attr, None)
+                if tip:
+                    tip.close()
+                    tip.deleteLater()
+                    setattr(self, attr, None)
+        except Exception:
+            pass
+
+        for attr in ("zip_thread", "extractionWorker"):
+            t = getattr(self, attr, None)
+            try:
+                if t and t.isRunning():
+                    t.requestInterruption()
+                    t.wait(5000)
+            except Exception:
+                pass
+
+        try:
+            t = getattr(getattr(self, "updater", None), "_thread", None)
+            if t and t.isRunning():
+                t.requestInterruption()
+                t.wait(3000)
+        except Exception:
+            pass
+
+        try:
+            self.progress_ring.hide()
+            self.progress_ring.setValue(0)
+        except Exception:
+            pass
+
         self.saveSettings()
-        self.cleanDIMBuildFolder()
         self.cleanUpTemporaryImage()
+        self.cleanDIMBuildFolder()
+
         super().closeEvent(event)
+
 
     def ensure_directory_structure(self):
         self.dimbuild_dir = os.path.join(doc_main_dir, "DIMBuild")
@@ -146,7 +179,7 @@ class DIMPackageGUI(QWidget):
     def build_zip_filename(self) -> str:
         prefix_raw = self.prefix_input.text() or "IM"
         sku_raw = self.sku_input.text() or ""
-        part_val = self.product_part_input.value()  # always 1..99
+        part_val = self.product_part_input.value()
         name_raw = self.product_name_input.text() or "Package"
 
         prefix_clean = re.sub(r'[^A-Za-z0-9]+', '', str(prefix_raw)).upper() or "IM"
