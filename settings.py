@@ -278,7 +278,7 @@ class SettingsDialog(QDialog):
         github_url  = "https://github.com/H1ghSyst3m/DIM-Creator"
         issues_url  = "https://github.com/H1ghSyst3m/DIM-Creator/issues"
         website_url = "https://example.com/dim-creator"
-        license_url = "https://raw.githubusercontent.com/H1ghSyst3m/DIM-Creator/refs/heads/main/LICENSE"
+        license_url = "https://raw.githubusercontent.com/H1ghSyst3m/DIM-Creator/main/LICENSE"
 
         def safe_icon(name: str):
             return getattr(FIF, name, FIF.LINK)

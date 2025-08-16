@@ -8,14 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## v1.1.2
 ### Added
+- Live ZIP filename preview (bottom-right footer). Updates in real time as you change Store/Auto Prefix, Prefix, SKU, Part, or Product Name.
 
 ### Changed
 - Manifest generation now sorts directories and files to ensure deterministic output.  
+- Zipping progress reporting is more accurate and stable:
+  - Guards against divide-by-zero when no files are present.
+  - Caps percentage updates correctly to avoid misleading 100% before completion.  
+- Common OS cruft files (e.g., `.DS_Store`, `Thumbs.db`, `desktop.ini`, `__MACOSX`) are now ignored during zipping and content extraction to prevent clutter.  
+- Removed unused helper `sanitize_product_name` to reduce maintenance surface.
 
 ### Fixed
 - Support directory cleanup is now more robust:
   - Handles read-only files by forcing writable permissions before deletion.
   - Uses a safe fallback for stubborn files and folders to avoid cleanup failures.
+- GUID input validation now correctly requires a full UUID (anchored regex), preventing partial matches.
+- Product part input now correctly formats numbers with leading zeros.
+- Github link correction for the license file.
 
 ## v1.1.1 - 2025-08-13
 ### Added

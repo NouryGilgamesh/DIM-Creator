@@ -61,6 +61,7 @@ class DIMPackageGUI(QWidget):
         setTheme(Theme.DARK)
         self.initUI()
         self.loadSettings()
+        self.updateZipPreview()
         self.updater = UpdateManager(self, settings, current_version=APP_VERSION, interval_hours=24)
         self.updater.schedule_on_startup_if_enabled()
         QTimer.singleShot(0, self.updateSourcePrefixBasedOnStore)
@@ -137,6 +138,32 @@ class DIMPackageGUI(QWidget):
             store_prefix = self.store_prefixes.get(selected_store, "")
             self.prefix_input.setText(store_prefix)
 
+        self.updateZipPreview()
+
+    def build_zip_filename(self) -> str:
+        prefix_raw = self.prefix_input.text() or "IM"
+        sku_raw = self.sku_input.text() or ""
+        part_val = self.product_part_input.value()  # always 1..99
+        name_raw = self.product_name_input.text() or "Package"
+
+        prefix_clean = re.sub(r'[^A-Za-z0-9]+', '', str(prefix_raw)).upper() or "IM"
+        try:
+            sku_formatted = f"{int(str(sku_raw)):08d}"
+        except ValueError:
+            sku_formatted = (str(sku_raw) or "").zfill(8) if sku_raw else "00000000"
+        part_str = f"{int(part_val):02d}"
+        sanitized_name = re.sub(r'[^A-Za-z0-9._-]+', '_', str(name_raw)).strip('_') or "Package"
+
+        return f"{prefix_clean}{sku_formatted}-{part_str}_{sanitized_name}.zip"
+
+    def updateZipPreview(self):
+        try:
+            if hasattr(self, 'zip_preview_edit'):
+                self.zip_preview_edit.setText(self.build_zip_filename())
+                self.zip_preview_edit.setCursorPosition(0)
+        except Exception:
+            pass
+
     def initUI(self):
         self.setWindowTitle('DIMCreator')
         self.setFixedSize(780, 690)
@@ -209,7 +236,7 @@ class DIMPackageGUI(QWidget):
 
         self.guid_input.setValidator(
             QRegularExpressionValidator(
-                QRegularExpression(r"[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}"),
+                QRegularExpression(r'^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$'),
                 self
             )
         )
@@ -246,6 +273,16 @@ class DIMPackageGUI(QWidget):
         self.clear_button.clicked.connect(self.clearAll)
         self.clear_button.setToolTip("Clear all input fields and clean the DIMBuild folder.")
 
+        self.zip_preview_title = QLabel('Preview:', self)
+        self.zip_preview_title.setGeometry(470, 640, 90, 30)
+        self.zip_preview_title.setStyleSheet(label_stylesheet)
+        self.zip_preview_title.setToolTip("This is how the DIM ZIP will be named.")
+
+        self.zip_preview_edit = LineEdit(self)
+        self.zip_preview_edit.setGeometry(530, 640, 240, 30)
+        self.zip_preview_edit.setReadOnly(True)
+        self.zip_preview_edit.setToolTip("Live preview of the final ZIP filename.")
+
         self.extract_button = PushButton('Extract Archive', self)
         self.extract_button.setGeometry(330, 640, 120, 30)
         self.extract_button.clicked.connect(self.extractArchive)
@@ -256,7 +293,7 @@ class DIMPackageGUI(QWidget):
         self.image_label.setToolTip("Drop an image here or click to select an image file.")
 
         self.fileExplorer = FileExplorer(self.dimbuild_dir, self, dimbuild_dir=self.dimbuild_dir, main_gui=self)
-        self.fileExplorer.setGeometry(15, 350, 750, 280)
+        self.fileExplorer.setGeometry(15, 380, 750, 250)
 
         self.update_button = ToolButton(FIF.SYNC, self)
         self.update_button.setGeometry(100, 640, 30, 30)
@@ -286,6 +323,11 @@ class DIMPackageGUI(QWidget):
         QShortcut(QKeySequence("Ctrl+Return"), self, self.process)
         QShortcut(QKeySequence("Ctrl+N"), self, self.clearAll)
         # QShortcut(QKeySequence("F1"), self, self.openFAQ)
+
+        self.prefix_input.textChanged.connect(self.updateZipPreview)
+        self.sku_input.textChanged.connect(self.updateZipPreview)
+        self.product_name_input.textChanged.connect(self.updateZipPreview)
+        self.product_part_input.valueChanged.connect(lambda *_: self.updateZipPreview())
 
     def showSettingsDialog(self):
         dialog = SettingsDialog(self.doc_main_dir, self)
@@ -362,6 +404,7 @@ class DIMPackageGUI(QWidget):
             self.generateGUID()
             self.support_clean_input.setChecked(True)
             self.image_label.loadPlaceholderImage()
+            self.updateZipPreview()
             log.info("All data successfully cleared.")
             show_info(self, "Clearing Successful", "All data successfully cleared.")
         except Exception as e:
@@ -380,7 +423,7 @@ class DIMPackageGUI(QWidget):
         product_name = self.product_name_input.text()
         prefix = self.prefix_input.text()
         sku = self.sku_input.text()
-        product_part = self.product_part_input.text()
+        product_part = f"{self.product_part_input.value():02d}"
         product_tags = self.product_tags_input.text()
         image_path = self.image_label.imagePath
         SupportClean = self.support_clean_input.isChecked()
@@ -509,9 +552,6 @@ class DIMPackageGUI(QWidget):
                 log.error(f"An error occurred while creating the supplement: {str(e)}")
                 return False
 
-        def sanitize_product_name(name):
-            return re.sub(r'\W+', '', name)
-
         def zip_content_and_manifests(content_dir, prefix, sku, product_part, product_name, destination_folder, report_progress, total_files):
             prefix_clean = re.sub(r'[^A-Za-z0-9]+', '', str(prefix)).upper()
             try:
@@ -528,7 +568,7 @@ class DIMPackageGUI(QWidget):
             log.info("Attempting to generate the DIM file.")
 
             files_zipped = 0
-            ignore_names = {'.DS_Store', 'Thumbs.db', 'desktop.ini'}
+            ignore_names = {'.DS_Store', 'Thumbs.db', 'desktop.ini', '__MACOSX'}
 
             with zipfile.ZipFile(zip_path, mode='w', compression=zipfile.ZIP_DEFLATED, compresslevel=9, strict_timestamps=False) as zipf:
                 for root, dirs, files in os.walk(content_dir):
@@ -545,7 +585,7 @@ class DIMPackageGUI(QWidget):
                         files_zipped += 1
                         if total_files > 0:
                             percent = int((files_zipped / total_files) * 100)
-                            report_progress(min(99, max(0, percent)))
+                            report_progress(99 if percent >= 99 else max(0, percent))
 
                 manifest_path = os.path.join(arc_base, "Manifest.dsx")
                 supplement_path = os.path.join(arc_base, "Supplement.dsx")
@@ -862,7 +902,7 @@ class ContentExtractionWorker(QThread):
                     except Exception as e:
                         log.error(f"Failed to create directory [{rel_dir}]: {e}")
 
-            ignore_names = {'.DS_Store', 'Thumbs.db', 'desktop.ini'}
+            ignore_names = {'.DS_Store', 'Thumbs.db', 'desktop.ini', '__MACOSX'}
             files_to_copy = []
             for root, _, files in os.walk(directory_abs):
                 if os.path.commonpath([os.path.abspath(root), common_base]) != common_base:
