@@ -1,17 +1,25 @@
 import os
 import sys
 import subprocess
+from pathlib import Path
 from contextlib import contextmanager
 from PyQt5.QtCore import QStandardPaths, Qt
 from qfluentwidgets import InfoBar, InfoBarPosition
 
 
-def resource_path(relative_path):
-    try:
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
+def resource_path(relative_path: str) -> str:
+    p = Path(relative_path)
+    if p.is_absolute():
+        return str(p)
+
+    if hasattr(sys, "_MEIPASS"):
+        base_path = Path(sys._MEIPASS)
+    elif getattr(sys, "frozen", False):
+        base_path = Path(sys.executable).resolve().parent
+    else:
+        base_path = Path(__file__).resolve().parent
+
+    return str(base_path / p)
 
 
 def documents_dir():
