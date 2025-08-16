@@ -120,7 +120,7 @@ class DIMPackageGUI(QWidget):
         selected_tags = self.product_tags_input.text().split(",")
 
         dialog = TagSelectionDialog(self.available_tags, selected_tags, self)
-        if dialog.exec_() == QDialog.Accepted:
+        if dialog.exec() == QDialog.Accepted:
             selected_tags = dialog.getSelectedTags()
             self.product_tags_input.setText(",".join(selected_tags))
 
@@ -339,7 +339,7 @@ class DIMPackageGUI(QWidget):
         dialog.template_destination_field.setText(self.template_destination)
         dialog.auto_update_checkbox.setChecked(settings.value("auto_update_check", True, type=bool))
 
-        if dialog.exec_():
+        if dialog.exec():
             self.copy_template_files = dialog.copy_templates_checkbox.isChecked()
             self.template_destination = dialog.template_destination_field.text()
 
