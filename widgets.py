@@ -26,8 +26,9 @@ from qfluentwidgets import (
 from qfluentwidgets import FluentIcon as FIF
 
 from utils import resource_path, calculate_total_files, show_warning, show_error, show_info
-from logger_utils import logger
+from logger_utils import get_logger
 
+log = get_logger(__name__)
 
 class ProductLineEdit(LineEdit):
     def __init__(self, parent=None):
@@ -52,7 +53,7 @@ class ProductLineEdit(LineEdit):
 
 class TagSelectionDialog(QDialog):
     def __init__(self, available_tags, selected_tags=None, parent=None):
-        super().__init__(parent, Qt.WindowCloseButtonHint)
+        super().__init__(parent, Qt.WindowType.WindowCloseButtonHint)
         self.setWindowTitle("Select Tags")
         self.setStyleSheet("TagSelectionDialog{background: rgb(32, 32, 32)}")
         setTheme(Theme.DARK)
@@ -566,7 +567,7 @@ class CustomTreeView(TreeView):
 
         if not normDestinationPath.startswith(normDimBuildDir):
             print(f"Attempt to drop outside DIMBuild directory: {normDestinationPath} to {normDimBuildDir}")
-            logger.warning(f"Attempt to drop outside DIMBuild directory: {normDestinationPath} to {normDimBuildDir}")
+            log.warning(f"Attempt to drop outside DIMBuild directory: {normDestinationPath} to {normDimBuildDir}")
             self.parent().InvalidFolderInfoBar()
             return
 
@@ -586,7 +587,7 @@ class CustomTreeView(TreeView):
                     any_file_op = True
             except Exception as e:
                 print(f"Error moving/copying {sourcePath} to {destinationPath}: {e}")
-                logger.error(f"Error moving/copying {sourcePath} to {destinationPath}: {e}")
+                log.error(f"Error moving/copying {sourcePath} to {destinationPath}: {e}")
                 self.parent().InvalidFolderInfoBar()
 
         self.overwrite_all = False
@@ -601,7 +602,7 @@ class CustomTreeView(TreeView):
 
         if not os.path.isdir(destinationPath):
             print(f"Invalid destination path for copy: {destinationPath}")
-            logger.error(f"Invalid destination path for copy: {destinationPath}")
+            log.error(f"Invalid destination path for copy: {destinationPath}")
             return
 
         basename = os.path.basename(sourcePath.rstrip(os.sep))
@@ -614,12 +615,12 @@ class CustomTreeView(TreeView):
                 common = os.path.commonpath([src_abs, tgt_abs])
                 if common == src_abs:
                     print(f"Copy blocked: {src_abs} -> {tgt_abs} (self/subfolder).")
-                    logger.warning(f"Copy blocked: {src_abs} -> {tgt_abs} (self/subfolder).")
+                    log.warning(f"Copy blocked: {src_abs} -> {tgt_abs} (self/subfolder).")
                     return
             try:
                 if os.path.exists(tgt_abs) and os.path.samefile(src_abs, tgt_abs):
                     print("Copy skipped: source and target are the same.")
-                    logger.info("Copy skipped: same source and target.")
+                    log.info("Copy skipped: same source and target.")
                     return
             except Exception:
                 pass
@@ -638,7 +639,7 @@ class CustomTreeView(TreeView):
 
             if reply == QMessageBox.No:
                 print("Copy canceled by user.")
-                logger.info("Copy canceled by user (overwrite denied).")
+                log.info("Copy canceled by user (overwrite denied).")
                 return
             if reply == QMessageBox.YesToAll:
                 self.overwrite_all = True
@@ -649,7 +650,7 @@ class CustomTreeView(TreeView):
                 else:
                     os.remove(target)
             except Exception as e:
-                logger.error(f"Failed to remove existing target '{target}': {e}")
+                log.error(f"Failed to remove existing target '{target}': {e}")
                 return
 
         try:
@@ -659,10 +660,10 @@ class CustomTreeView(TreeView):
                 os.makedirs(os.path.dirname(target), exist_ok=True)
                 shutil.copy2(sourcePath, target)
             print(f"Item copied: {sourcePath} -> {target}")
-            logger.info(f"Item copied: {sourcePath} -> {target}")
+            log.info(f"Item copied: {sourcePath} -> {target}")
         except Exception as e:
             print(f"Error copying {sourcePath} to {target}: {e}")
-            logger.error(f"Error copying {sourcePath} to {target}: {e}")
+            log.error(f"Error copying {sourcePath} to {target}: {e}")
             self.parent().InvalidFolderInfoBar()
 
 
@@ -672,7 +673,7 @@ class CustomTreeView(TreeView):
 
         if not os.path.isdir(destinationPath):
             print(f"Invalid destination path for move: {destinationPath}")
-            logger.error(f"Invalid destination path for move: {destinationPath}")
+            log.error(f"Invalid destination path for move: {destinationPath}")
             return
 
         basename = os.path.basename(sourcePath.rstrip(os.sep))
@@ -685,12 +686,12 @@ class CustomTreeView(TreeView):
                 common = os.path.commonpath([src_abs, tgt_abs])
                 if common == src_abs:
                     print(f"Move blocked: {src_abs} -> {tgt_abs} (self/subfolder).")
-                    logger.warning(f"Move blocked: {src_abs} -> {tgt_abs} (self/subfolder).")
+                    log.warning(f"Move blocked: {src_abs} -> {tgt_abs} (self/subfolder).")
                     return
             try:
                 if os.path.exists(tgt_abs) and os.path.samefile(src_abs, tgt_abs):
                     print("Move skipped: source and target are the same.")
-                    logger.info("Move skipped: same source and target.")
+                    log.info("Move skipped: same source and target.")
                     return
             except Exception:
                 pass
@@ -709,7 +710,7 @@ class CustomTreeView(TreeView):
 
             if reply == QMessageBox.No:
                 print("Move canceled by user.")
-                logger.info("Move canceled by user (overwrite denied).")
+                log.info("Move canceled by user (overwrite denied).")
                 return
             if reply == QMessageBox.YesToAll:
                 self.overwrite_all = True
@@ -720,17 +721,17 @@ class CustomTreeView(TreeView):
                 else:
                     os.remove(target)
             except Exception as e:
-                logger.error(f"Failed to remove existing target '{target}': {e}")
+                log.error(f"Failed to remove existing target '{target}': {e}")
                 return
 
         try:
             os.makedirs(os.path.dirname(target), exist_ok=True)
             shutil.move(sourcePath, target)
             print(f"Item moved: {sourcePath} -> {target}")
-            logger.info(f"Item moved: {sourcePath} -> {target}")
+            log.info(f"Item moved: {sourcePath} -> {target}")
         except Exception as e:
             print(f"Error moving {sourcePath} to {target}: {e}")
-            logger.error(f"Error moving {sourcePath} to {target}: {e}")
+            log.error(f"Error moving {sourcePath} to {target}: {e}")
             self.parent().InvalidFolderInfoBar()
 
 
@@ -782,7 +783,7 @@ class FileExplorer(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
             print(f"Error: {e}")
-            logger.error(f"Error: {e}")
+            log.error(f"Error: {e}")
             QTimer.singleShot(0, self.refresh_view)
 
     def resizeEvent(self, event):
@@ -876,10 +877,10 @@ class FileExplorer(QWidget):
                         QDesktopServices.openUrl(QUrl.fromLocalFile(path))
                 except Exception as e:
                     print(f"Error opening the path in explorer: {e}")
-                    logger.error(f"Error opening the path in explorer: {e}")
+                    log.error(f"Error opening the path in explorer: {e}")
             else:
                 print("Error: The selected path does not exist.")
-                logger.warning("Error: The selected path does not exist.")
+                log.warning("Error: The selected path does not exist.")
 
     def refresh_view(self):
         root = self.treeView.model().rootPath()
@@ -907,10 +908,10 @@ class FileExplorer(QWidget):
                 self.clipboard = source_path
                 self.isCutOperation = False
                 print(f"Item copied: {self.clipboard}")
-                logger.info(f"Item copied: {self.clipboard}")
+                log.info(f"Item copied: {self.clipboard}")
             else:
                 print("Error: The selected item does not exist.")
-                logger.error(f"Error: The selected item does not exist. - {source_path}")
+                log.error(f"Error: The selected item does not exist. - {source_path}")
 
     def cutSelected(self):
         selected_index = self.treeView.currentIndex()
@@ -920,15 +921,15 @@ class FileExplorer(QWidget):
                 self.clipboard = source_path
                 self.isCutOperation = True
                 print(f"Item cut: {self.clipboard}")
-                logger.info(f"Item cut: {self.clipboard}")
+                log.info(f"Item cut: {self.clipboard}")
             else:
                 print("Error: The selected item does not exist.")
-                logger.error(f"Error: The selected item does not exist. - {source_path}")
+                log.error(f"Error: The selected item does not exist. - {source_path}")
 
     def pasteIntoFolder(self):
         if not (self.clipboard and os.path.exists(self.clipboard)):
             print("Nothing to paste or source no longer exists.")
-            logger.warning("Paste aborted: empty clipboard or missing source.")
+            log.warning("Paste aborted: empty clipboard or missing source.")
             return
 
         destination_index = self.treeView.currentIndex()
@@ -940,7 +941,7 @@ class FileExplorer(QWidget):
 
         if not os.path.isdir(destination_path):
             print("Invalid destination path for paste operation.")
-            logger.error(f"Invalid destination path for paste operation: {destination_path}")
+            log.error(f"Invalid destination path for paste operation: {destination_path}")
             return
 
         basename = os.path.basename(self.clipboard.rstrip(os.sep))
@@ -955,11 +956,11 @@ class FileExplorer(QWidget):
                     show_warning(self, "Invalid Operation",
                                 "Cannot paste a folder into itself or its subfolder.",
                                 Qt.Vertical)
-                    logger.warning(f"Paste blocked: {src_abs} -> {tgt_abs} (self/subfolder).")
+                    log.warning(f"Paste blocked: {src_abs} -> {tgt_abs} (self/subfolder).")
                     return
             if os.path.samefile(self.clipboard, target):
                 show_info(self, "Operation Skipped", "Source and destination are the same.")
-                logger.info(f"Paste skipped: same source and destination: {src_abs}")
+                log.info(f"Paste skipped: same source and destination: {src_abs}")
                 return
         except Exception:
             pass
@@ -972,7 +973,7 @@ class FileExplorer(QWidget):
             )
             if reply == QMessageBox.No:
                 print("Operation canceled by the user.")
-                logger.info("Paste canceled by user (overwrite denied).")
+                log.info("Paste canceled by user (overwrite denied).")
                 show_info(self, "Operation Canceled",
                         f"Item <strong>{basename}</strong> not moved/copied.")
                 return
@@ -983,7 +984,7 @@ class FileExplorer(QWidget):
                 else:
                     os.remove(target)
             except Exception as e:
-                logger.error(f"Failed to remove existing target '{target}': {e}")
+                log.error(f"Failed to remove existing target '{target}': {e}")
                 show_error(self, "Overwrite Failed",
                         f"Could not remove existing target.<br><small>{e}</small>")
                 return
@@ -992,7 +993,7 @@ class FileExplorer(QWidget):
             if self.isCutOperation:
                 shutil.move(self.clipboard, target)
                 print(f"Item moved: {self.clipboard} -> {destination_path}")
-                logger.info(f"Item moved: {self.clipboard} -> {destination_path}")
+                log.info(f"Item moved: {self.clipboard} -> {destination_path}")
                 show_info(self, "Moving Successful",
                         f"Item <strong>{basename}</strong> successfully moved.")
             else:
@@ -1002,12 +1003,12 @@ class FileExplorer(QWidget):
                     os.makedirs(os.path.dirname(target), exist_ok=True)
                     shutil.copy2(self.clipboard, target)
                 print(f"Item copied: {self.clipboard} -> {destination_path}")
-                logger.info(f"Item copied: {self.clipboard} -> {destination_path}")
+                log.info(f"Item copied: {self.clipboard} -> {destination_path}")
                 show_info(self, "Copying Successful",
                         f"Item <strong>{basename}</strong> successfully copied.")
         except Exception as e:
             print(f"Error during paste operation: {e}")
-            logger.error(f"Error during paste operation: {e}")
+            log.error(f"Error during paste operation: {e}")
             show_error(self, "Paste Failed", f"Error during paste operation.<br><small>{e}</small>")
         finally:
             self.clipboard = None
@@ -1027,11 +1028,11 @@ class FileExplorer(QWidget):
                     os.remove(target)
                     QTimer.singleShot(0, self.refresh_view)
                 print(f"Item deleted: {target}")
-                logger.info(f"Item deleted: {target}")
+                log.info(f"Item deleted: {target}")
                 show_info(self, "Deletion Successful", "Item successfully deleted.")
             except OSError as e:
                 print(f"Failed to delete the selected item. Error encountered: {e}")
-                logger.error(f"Failed to delete the selected item. Error encountered: {e}")
+                log.error(f"Failed to delete the selected item. Error encountered: {e}")
                 show_error(self, 'Deletion Failed', "Failed to delete the selected item. Please try again or check for file permissions.")
 
     def renameSelected(self):
@@ -1048,7 +1049,7 @@ class FileExplorer(QWidget):
                 new_path = os.path.join(base_path, new_name)
                 if os.path.exists(new_path):
                     print("Error: A file or folder with the new name already exists.")
-                    logger.error(f"Error: Failed to rename item <strong>{current_name}</strong> into <strong>{new_name}</strong>. A file or folder with the <strong>{new_name}</strong> already exists.")
+                    log.error(f"Error: Failed to rename item <strong>{current_name}</strong> into <strong>{new_name}</strong>. A file or folder with the <strong>{new_name}</strong> already exists.")
                     show_warning(self, "Renaming Failed", f"Failed to rename item <strong>{current_name}</strong> into <strong>{new_name}</strong>. A file or folder with the <strong>{new_name}</strong> already exists.", Qt.Vertical)
                     return
                 try:
@@ -1056,7 +1057,7 @@ class FileExplorer(QWidget):
                     QTimer.singleShot(0, self.refresh_view)
                 except OSError as e:
                     print(f"Error renaming file {current_path} to {new_path}: {e}")
-                    logger.error(f"Error renaming file {current_path} to {new_path}: {e}")
+                    log.error(f"Error renaming file {current_path} to {new_path}: {e}")
 
     def createNewFile(self):
         dialog = NameEntryDialog(self, title="New File", placeholder="Enter file name")
@@ -1083,11 +1084,11 @@ class FileExplorer(QWidget):
                 QTimer.singleShot(0, self.refresh_view)
                 show_info(self, "File Created", f"New file created: {file_name}")
                 print(f"New file created: {new_file_path}")
-                logger.info(f"New file created: {new_file_path}")
+                log.info(f"New file created: {new_file_path}")
             except IOError as e:
                 show_error(self, "Error", f"Error creating file {file_name}: {e}")
                 print(f"Error creating file {new_file_path}: {e}")
-                logger.error(f"Error creating file {new_file_path}: {e}")
+                log.error(f"Error creating file {new_file_path}: {e}")
 
     def createNewFolder(self):
         dialog = NameEntryDialog(self, title="New Folder", placeholder="Enter folder name")
@@ -1112,9 +1113,9 @@ class FileExplorer(QWidget):
                 QTimer.singleShot(0, self.refresh_view)
                 show_info(self, "Folder Created", f"New folder created: {folder_name}")
                 print(f"New folder created: {new_folder_path}")
-                logger.info(f"New folder created: {new_folder_path}")
+                log.info(f"New folder created: {new_folder_path}")
             except OSError as e:
                 show_error(self, "Error", f"Error creating folder {folder_name}.")
                 print(f"Error creating folder {new_folder_path}: {e}")
-                logger.error(f"Error creating folder {new_folder_path}: {e}")
+                log.error(f"Error creating folder {new_folder_path}: {e}")
 

@@ -2,7 +2,7 @@ import os
 import json
 from PySide6.QtWidgets import (
     QDialog, QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, QStackedWidget,
-    QTableWidgetItem, QListWidgetItem, QFrame
+    QTableWidgetItem, QListWidgetItem, QFrame, QAbstractItemView
 )
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices
@@ -29,8 +29,8 @@ class StoreDataEditor(QWidget):
         self.table.setHorizontalHeaderLabels(["Name", "Prefix"])
         self.table.horizontalHeader().setStretchLastSection(True)
         self.table.setAlternatingRowColors(True)
-        self.table.setSelectionBehavior(self.table.SelectRows)
-        self.table.setEditTriggers(self.table.DoubleClicked | self.table.EditKeyPressed)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.table.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked | QAbstractItemView.EditTrigger.EditKeyPressed)
 
         self.table.setColumnWidth(0, 200)
         self.table.setColumnWidth(1, 100)
@@ -186,7 +186,7 @@ class SimpleListEditor(QWidget):
 
 class SettingsDialog(QDialog):
     def __init__(self, doc_main_dir: str, parent=None):
-        super().__init__(parent, Qt.WindowCloseButtonHint)
+        super().__init__(parent, Qt.WindowType.WindowCloseButtonHint)
         setTheme(Theme.DARK)
         self.doc_main_dir = doc_main_dir
         self.app_version = APP_VERSION

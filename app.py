@@ -755,7 +755,7 @@ class DIMPackageGUI(QWidget):
             self._close_tip("stateTooltip")
             tip = StateToolTip('Extracting', 'Please wait...', self)
             tip.move(510, 30)
-            tip.setAttribute(Qt.WA_DeleteOnClose, True)
+            tip.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
             tip.show()
             self.stateTooltip = tip
             return
@@ -767,7 +767,7 @@ class DIMPackageGUI(QWidget):
         final_tip = StateToolTip(title, message or ('Done.' if success else 'An error occurred.'), self)
         final_tip.setState(success)
         final_tip.move(510, 30)
-        final_tip.setAttribute(Qt.WA_DeleteOnClose, True)
+        final_tip.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         final_tip.show()
 
         self._finalTip = final_tip
