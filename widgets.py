@@ -3,19 +3,19 @@ import shutil
 import tempfile
 import base64
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QMessageBox, QWidget, QLabel, QDialog, QVBoxLayout, QFileDialog,
-    QCompleter, QHBoxLayout, QFileSystemModel, QShortcut
+    QCompleter, QHBoxLayout, QFileSystemModel
 )
-from PyQt5.QtCore import (
-    Qt, QThread, pyqtSignal, QEasingCurve, QUrl, QTimer, QRegularExpression
+from PySide6.QtCore import (
+    Qt, QThread, Signal, QEasingCurve, QUrl, QTimer, QRegularExpression
 )
-from PyQt5.QtNetwork import (
+from PySide6.QtNetwork import (
     QNetworkAccessManager, QNetworkRequest, QNetworkReply
 )
-from PyQt5.QtGui import (
+from PySide6.QtGui import (
     QPixmap, QImage, QCursor, QDesktopServices, QIcon, QKeySequence,
-    QIntValidator, QRegularExpressionValidator
+    QIntValidator, QRegularExpressionValidator, QShortcut
 )
 from qfluentwidgets import (
     setTheme, Theme, PrimaryPushButton, PushButton, Action, RoundMenu, LineEdit,
@@ -460,9 +460,9 @@ class ImageLabel(QLabel):
             return False
 
 class ZipThread(QThread):
-    finished = pyqtSignal()
-    error = pyqtSignal(str)
-    progressUpdated = pyqtSignal(int)
+    finished = Signal()
+    error = Signal(str)
+    progressUpdated = Signal(int)
 
     def __init__(self, content_dir, prefix, sku, product_part, product_name, destination_folder, zip_function):
         super().__init__()
@@ -795,7 +795,7 @@ class FileExplorer(QWidget):
             icon=InfoBarIcon.INFORMATION,
             title='Invalid Destination',
             content=content,
-            orient=Qt.Vertical,
+            orient=Qt.Orientation.Vertical,
             isClosable=True,
             position=InfoBarPosition.BOTTOM_RIGHT,
             duration=2000,

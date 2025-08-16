@@ -1,11 +1,11 @@
 import os
 import json
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QDialog, QWidget, QVBoxLayout, QHBoxLayout, QFileDialog, QStackedWidget,
     QTableWidgetItem, QListWidgetItem, QFrame
 )
-from PyQt5.QtCore import Qt, QUrl
-from PyQt5.QtGui import QDesktopServices
+from PySide6.QtCore import Qt, QUrl
+from PySide6.QtGui import QDesktopServices
 from qfluentwidgets import (
     setTheme, Theme, CheckBox, LineEdit, ToolButton, PushButton, PrimaryPushButton,
     Pivot, FluentIcon as FIF, TableWidget, ListWidget, SubtitleLabel

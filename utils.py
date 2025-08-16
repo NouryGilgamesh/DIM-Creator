@@ -3,7 +3,7 @@ import sys
 import subprocess
 from pathlib import Path
 from contextlib import contextmanager
-from PyQt5.QtCore import QStandardPaths, Qt
+from PySide6.QtCore import QStandardPaths, Qt
 from qfluentwidgets import InfoBar, InfoBarPosition
 
 

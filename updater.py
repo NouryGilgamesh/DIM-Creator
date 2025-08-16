@@ -8,10 +8,10 @@ from dataclasses import dataclass
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
-from PyQt5.QtCore import QObject, QThread, pyqtSignal, QTimer, Qt
-from PyQt5.QtWidgets import QTextBrowser
-from PyQt5.QtGui import QDesktopServices, QFont
-from PyQt5.QtCore import QUrl
+from PySide6.QtCore import QObject, QThread, Signal, QTimer, Qt
+from PySide6.QtWidgets import QTextBrowser
+from PySide6.QtGui import QDesktopServices, QFont
+from PySide6.QtCore import QUrl
 
 from qfluentwidgets import (
     MessageBoxBase, SubtitleLabel, BodyLabel, CheckBox
@@ -72,8 +72,8 @@ def _fetch_latest(timeout=7) -> ReleaseInfo:
         )
 
 class UpdateCheckThread(QThread):
-    result = pyqtSignal(object)
-    error = pyqtSignal(str)
+    result = Signal(object)
+    error = Signal(str)
 
     def __init__(self, *, current_version: str):
         super().__init__()
@@ -138,7 +138,7 @@ class UpdateDialog(MessageBoxBase):
         )
 
 class UpdateManager(QObject):
-    checkingChanged = pyqtSignal(bool)
+    checkingChanged = Signal(bool)
 
     def __init__(self, parent_widget, settings, *, current_version: str, interval_hours: int = 24):
         super().__init__(parent_widget)

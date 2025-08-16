@@ -18,9 +18,12 @@ if sys.stderr is None:
 
 from qfluentwidgets import setFont, PrimaryPushButton, PushButton, Action, RoundMenu, LineEdit, setTheme, Theme, EditableComboBox, CheckBox, InfoBar, InfoBarPosition, InfoBarIcon, ProgressRing, CompactSpinBox, ToolButton, TogglePushButton, FlowLayout, TreeView, MessageBoxBase, SubtitleLabel, StateToolTip
 from qfluentwidgets import FluentIcon as FIF
-from PyQt5.QtWidgets import (QMessageBox, QApplication, QWidget, QLabel, QDialog, QVBoxLayout, QFileDialog, QCompleter, QHBoxLayout, QFileSystemModel, QShortcut)
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEasingCurve, QUrl, QSettings, QTimer, QRegularExpression
-from PyQt5.QtGui import QPixmap, QCursor, QDesktopServices, QIcon, QKeySequence, QIntValidator, QRegularExpressionValidator
+from PySide6.QtWidgets import (
+    QMessageBox, QApplication, QWidget, QLabel, QDialog, 
+    QVBoxLayout, QFileDialog, QCompleter, QHBoxLayout, QFileSystemModel
+    )
+from PySide6.QtCore import Qt, QThread, Signal, QEasingCurve, QUrl, QSettings, QTimer, QRegularExpression
+from PySide6.QtGui import QPixmap, QCursor, QDesktopServices, QIcon, QKeySequence, QIntValidator, QRegularExpressionValidator, QShortcut
 from xml.etree.ElementTree import Element, SubElement, tostring
 from xml.dom import minidom
 from PIL import Image, ImageOps
@@ -354,7 +357,7 @@ class DIMPackageGUI(QWidget):
             self.store_input.setCompleter(self.store_completer)
 
     def toggleAlwaysOnTop(self):
-        self.setWindowFlags(self.windowFlags() ^ Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(self.windowFlags() ^ Qt.WindowType.WindowStaysOnTopHint)
         self.always_on_top_button.setIcon(FIF.UNPIN if self.always_on_top_button.isChecked() else FIF.PIN)
         self.show()
 
@@ -654,7 +657,7 @@ class DIMPackageGUI(QWidget):
         InfoBar.success(
             title='Success',
             content="The DIM has been successfully created and saved.",
-            orient=Qt.Horizontal,
+            orient=Qt.Orientation.Horizontal,
             isClosable=True,
             position=InfoBarPosition.TOP_RIGHT,
             duration=2000,
@@ -739,8 +742,8 @@ class DIMPackageGUI(QWidget):
 
 
 class ContentExtractionWorker(QThread):
-    extractionComplete = pyqtSignal()
-    extractionError = pyqtSignal(str)
+    extractionComplete = Signal()
+    extractionError = Signal(str)
 
     def __init__(self, archive_file_path, daz_folders, content_dir, copy_template_files, template_destination):
         super(ContentExtractionWorker, self).__init__()
@@ -953,8 +956,6 @@ if __name__ == '__main__':
     except Exception:
         pass
 
-    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
     app = QApplication(sys.argv)
     app.setOrganizationName("Syst3mApps")
     app.setApplicationName("DIMCreator")
