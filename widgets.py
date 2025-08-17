@@ -461,7 +461,7 @@ class ImageLabel(QLabel):
             return False
 
 class ZipThread(QThread):
-    finished = Signal()
+    succeeded = Signal()
     error = Signal(str)
     progressUpdated = Signal(int)
 
@@ -488,7 +488,7 @@ class ZipThread(QThread):
                 self.reportProgress,
                 total_files
             )
-            self.finished.emit()
+            self.succeeded.emit()
         except Exception as e:
             self.error.emit(str(e))
 
@@ -569,6 +569,7 @@ class CustomTreeView(TreeView):
             print(f"Attempt to drop outside DIMBuild directory: {normDestinationPath} to {normDimBuildDir}")
             log.warning(f"Attempt to drop outside DIMBuild directory: {normDestinationPath} to {normDimBuildDir}")
             self.parent().InvalidFolderInfoBar()
+            event.ignore()
             return
 
         any_file_op = False

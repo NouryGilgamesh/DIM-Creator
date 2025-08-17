@@ -10,6 +10,7 @@ import re
 import subprocess
 import patoolib
 import ctypes
+import shiboken6
 
 if sys.stdout is None:
     sys.stdout = open(os.devnull, "w")
@@ -94,8 +95,12 @@ class DIMPackageGUI(QWidget):
             for attr in ("stateTooltip", "_finalTip"):
                 tip = getattr(self, attr, None)
                 if tip:
-                    tip.close()
-                    tip.deleteLater()
+                    try:
+                        if shiboken6.isValid(tip):
+                            tip.close()
+                            tip.deleteLater()
+                    except Exception:
+                        pass
                     setattr(self, attr, None)
         except Exception:
             pass
@@ -651,9 +656,9 @@ class DIMPackageGUI(QWidget):
                 zt = self.zip_thread
                 self.process_button.setEnabled(False)
                 zt.progressUpdated.connect(self.updateProgress)
-                zt.finished.connect(self.DIMProcessCompleted)
+                zt.succeeded.connect(self.DIMProcessCompleted)
+                zt.succeeded.connect(lambda *, _zt=zt: _zt.deleteLater())
                 zt.error.connect(self.onZipError)
-                zt.finished.connect(lambda *, _zt=zt: _zt.deleteLater())
                 zt.error.connect(lambda _m, *, _zt=zt: _zt.deleteLater())
                 zt.start()
             else:
@@ -698,24 +703,73 @@ class DIMPackageGUI(QWidget):
         )
 
     def extractArchive(self):
+        if getattr(self, "extractionWorker", None) and self.extractionWorker.isRunning():
+            show_info(self, "Extraction running", "Please wait for the current extraction to finish.")
+            return
+
         self._extractionHadError = False
-        archive_file_path, _ = QFileDialog.getOpenFileName(self, "Select Archive File", "", "Archive Files (*.zip *.rar *.7z)")
-        if archive_file_path:
-            self.showExtractionState(True)
-            log.info("Extraction started...")
-            self.extractionWorker = ContentExtractionWorker(archive_file_path, set(self.daz_folders), self.content_dir, self.copy_template_files, self.template_destination)
-            self.extractionWorker.extractionComplete.connect(self.onExtractionComplete)
-            self.extractionWorker.extractionError.connect(self.onExtractionError)
-            self.extractionWorker.start()
+        archive_file_path, _ = QFileDialog.getOpenFileName(
+            self, "Select Archive File", "", "Archive Files (*.zip *.rar *.7z)"
+        )
+        if not archive_file_path:
+            return
+
+        self.showExtractionState(True)
+        log.info("Extraction started...")
+
+        w = ContentExtractionWorker(
+            archive_file_path,
+            set(self.daz_folders),
+            self.content_dir,
+            self.copy_template_files,
+            self.template_destination,
+            parent=self
+        )
+        self.extractionWorker = w
+
+        w.extractionComplete.connect(self.onExtractionComplete)
+        w.extractionError.connect(self.onExtractionError)
+
+        w.finished.connect(self._cleanupExtractionWorker)
+        w.finished.connect(w.deleteLater)
+
+        w.start()
+
 
     def dropExtractArchive(self, archive_file_path):
         self._extractionHadError = False
         self.showExtractionState(True)
         log.info("Extraction started from TreeView...")
-        self.extractionWorker = ContentExtractionWorker(archive_file_path, set(self.daz_folders), self.content_dir, self.copy_template_files, self.template_destination)
-        self.extractionWorker.extractionComplete.connect(self.onExtractionComplete)
-        self.extractionWorker.extractionError.connect(self.onExtractionError)
-        self.extractionWorker.start()
+
+        w = ContentExtractionWorker(
+            archive_file_path,
+            set(self.daz_folders),
+            self.content_dir,
+            self.copy_template_files,
+            self.template_destination,
+            parent=self
+        )
+        self.extractionWorker = w
+
+        w.extractionComplete.connect(self.onExtractionComplete)
+        w.extractionError.connect(self.onExtractionError)
+
+        w.finished.connect(self._cleanupExtractionWorker)
+        w.finished.connect(w.deleteLater)
+
+        w.start()
+
+    def _cleanupExtractionWorker(self):
+        w = getattr(self, "extractionWorker", None)
+        if not w:
+            return
+        try:
+            if w.isRunning():
+                w.requestInterruption()
+                w.wait(2000)
+        except Exception:
+            pass
+        self.extractionWorker = None
 
     def onExtractionComplete(self):
         if not self._extractionHadError:
@@ -723,11 +777,15 @@ class DIMPackageGUI(QWidget):
             log.info("Extraction Process completed.")
             self.fileExplorer.refresh_view()
 
-            if self.extractionWorker.copiedTemplates:
-                for templateName in self.extractionWorker.copiedTemplates:
-                    show_info(self, "Template Copied", f"Template <b>{templateName}</b> copied successfully.",
-                              Qt.Vertical, InfoBarPosition.BOTTOM_RIGHT)
-        self.extractionWorker = None  
+            worker = self.sender()
+            copied = getattr(worker, "copiedTemplates", None)
+            if copied:
+                for templateName in copied:
+                    show_info(
+                        self, "Template Copied",
+                        f"Template <b>{templateName}</b> copied successfully.",
+                        Qt.Vertical, InfoBarPosition.BOTTOM_RIGHT
+                    )
         
     def onExtractionError(self, message):
         self._extractionHadError = True
@@ -739,13 +797,14 @@ class DIMPackageGUI(QWidget):
                 pass
             self.stateTooltip = None
         show_error(self, "Extraction failed", message, Qt.Vertical, InfoBarPosition.BOTTOM_RIGHT, True, 3000)
-        self.extractionWorker = None
+
 
     def _close_tip(self, tip_attr):
         tip = getattr(self, tip_attr, None)
         if tip:
             try:
-                tip.close()
+                if shiboken6.isValid(tip):
+                    tip.close()
             except Exception:
                 pass
             setattr(self, tip_attr, None)
@@ -771,15 +830,25 @@ class DIMPackageGUI(QWidget):
         final_tip.show()
 
         self._finalTip = final_tip
-        QTimer.singleShot(1800, lambda: (final_tip.close(), setattr(self, "_finalTip", None)))
+
+        def _safe_close(tip=final_tip, self=self):
+            if shiboken6.isValid(tip):
+                try:
+                    tip.close()
+                except RuntimeError:
+                    pass
+            if getattr(self, "_finalTip", None) is tip:
+                setattr(self, "_finalTip", None)
+
+        QTimer.singleShot(1800, _safe_close)
 
 
 class ContentExtractionWorker(QThread):
     extractionComplete = Signal()
     extractionError = Signal(str)
 
-    def __init__(self, archive_file_path, daz_folders, content_dir, copy_template_files, template_destination):
-        super(ContentExtractionWorker, self).__init__()
+    def __init__(self, archive_file_path, daz_folders, content_dir, copy_template_files, template_destination, parent=None):
+        super(ContentExtractionWorker, self).__init__(parent)
         self.archive_file_path = archive_file_path
         self.daz_folders = {s.casefold() for s in daz_folders}
         self.content_dir = content_dir
@@ -791,22 +860,21 @@ class ContentExtractionWorker(QThread):
         with suppress_cmd_window():
             log.info(f"Starting extraction of {self.archive_file_path}")
             success = False
+            temp_dir = None
             try:
                 temp_dir = tempfile.mkdtemp()
                 patoolib.extract_archive(self.archive_file_path, outdir=temp_dir)
                 log.info(f"Archive extracted to temporary directory: [{temp_dir}]")
 
                 base_paths, embedded_archive_files = self.scanDirectory(temp_dir)
-
-                template_archives = [file for file in embedded_archive_files if "templ" in os.path.basename(file).lower()]
-                remaining_archives = [file for file in embedded_archive_files if file not in template_archives]
+                template_archives = [f for f in embedded_archive_files if "templ" in os.path.basename(f).lower()]
+                remaining_archives = [f for f in embedded_archive_files if f not in template_archives]
 
                 if len(remaining_archives) > 1:
                     self.extractionError.emit("Multiple archive files found, canceling extraction.")
-                    shutil.rmtree(temp_dir)
                     return
                 elif len(remaining_archives) == 1:
-                    if template_archives: 
+                    if template_archives:
                         self.copyTemplateArchive(template_archives[0])
                     self.processEmbeddedArchive(remaining_archives[0], base_paths)
                     success = True
@@ -817,20 +885,22 @@ class ContentExtractionWorker(QThread):
                     success = True
                 else:
                     self.extractionError.emit("No recognized daz main folders found in the archive.")
-                    shutil.rmtree(temp_dir)
                     return
 
-                shutil.rmtree(temp_dir)
             except Exception as e:
                 msg = str(e)
                 if "7z" in msg.lower() or "unrar" in msg.lower():
                     self.extractionError.emit(
-                        "No suitable extractor found (7-Zip or UnRAR). "
-                        "Please install and try again."
+                        "No suitable extractor found (7-Zip or UnRAR). Please install and try again."
                     )
                 else:
                     self.extractionError.emit(msg)
             finally:
+                try:
+                    if temp_dir and os.path.isdir(temp_dir):
+                        shutil.rmtree(temp_dir, ignore_errors=True)
+                except Exception:
+                    pass
                 if success:
                     self.extractionComplete.emit()
 
@@ -839,7 +909,7 @@ class ContentExtractionWorker(QThread):
             if not os.path.exists(self.template_destination):
                 os.makedirs(self.template_destination, exist_ok=True)
             target_path = os.path.join(self.template_destination, os.path.basename(template_archive_path))
-            shutil.copy(template_archive_path, target_path)
+            shutil.copy2(template_archive_path, target_path)
             template_file = os.path.basename(template_archive_path)
             self.copiedTemplates.append(template_file)
             log.info(f"Copied template archive [{template_archive_path}] to [{self.template_destination}]")
@@ -969,7 +1039,6 @@ class ContentExtractionWorker(QThread):
                     log.error(f"Failed to copy file [{src}] to [{dst}]: {e}")
 
             if files_to_copy:
-                from concurrent.futures import ThreadPoolExecutor
                 with ThreadPoolExecutor(max_workers=get_optimal_workers()) as executor:
                     list(executor.map(copy_file, files_to_copy))
 
