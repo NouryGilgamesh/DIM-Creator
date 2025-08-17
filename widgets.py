@@ -631,18 +631,22 @@ class CustomTreeView(TreeView):
         if os.path.exists(target):
             if not self.overwrite_all:
                 reply = QMessageBox.question(
-                    self.parent(), 'Item exists',
+                    self.parent(),
+                    "Item exists",
                     f"'{basename}' already exists. Overwrite (replace)?",
-                    QMessageBox.Yes | QMessageBox.No | QMessageBox.YesToAll, QMessageBox.No
+                    QMessageBox.StandardButton.Yes
+                    | QMessageBox.StandardButton.No
+                    | QMessageBox.StandardButton.YesToAll,
+                    QMessageBox.StandardButton.No
                 )
             else:
-                reply = QMessageBox.Yes
+                reply = QMessageBox.StandardButton.Yes
 
-            if reply == QMessageBox.No:
+            if reply == QMessageBox.StandardButton.No:
                 print("Copy canceled by user.")
                 log.info("Copy canceled by user (overwrite denied).")
                 return
-            if reply == QMessageBox.YesToAll:
+            if reply == QMessageBox.StandardButton.YesToAll:
                 self.overwrite_all = True
 
             try:
@@ -702,18 +706,22 @@ class CustomTreeView(TreeView):
         if os.path.exists(target):
             if not self.overwrite_all:
                 reply = QMessageBox.question(
-                    self.parent(), 'Item exists',
+                    self.parent(),
+                    "Item exists",
                     f"'{basename}' already exists. Overwrite (replace)?",
-                    QMessageBox.Yes | QMessageBox.No | QMessageBox.YesToAll, QMessageBox.No
+                    QMessageBox.StandardButton.Yes 
+                    | QMessageBox.StandardButton.No 
+                    | QMessageBox.StandardButton.YesToAll,
+                    QMessageBox.StandardButton.No
                 )
             else:
-                reply = QMessageBox.Yes
+                reply = QMessageBox.StandardButton.Yes
 
-            if reply == QMessageBox.No:
+            if reply == QMessageBox.StandardButton.No:
                 print("Move canceled by user.")
                 log.info("Move canceled by user (overwrite denied).")
                 return
-            if reply == QMessageBox.YesToAll:
+            if reply == QMessageBox.StandardButton.YesToAll:
                 self.overwrite_all = True
 
             try:
@@ -782,7 +790,12 @@ class FileExplorer(QWidget):
                     raise Exception(f"Failed to open file: {path}")
             QTimer.singleShot(0, self.refresh_view)
         except Exception as e:
-            QMessageBox.critical(self, "Error", str(e))
+            QMessageBox.critical(
+                self,
+                "Error",
+                str(e),
+                QMessageBox.StandardButton.Ok
+            )
             print(f"Error: {e}")
             log.error(f"Error: {e}")
             QTimer.singleShot(0, self.refresh_view)
@@ -968,11 +981,14 @@ class FileExplorer(QWidget):
 
         if os.path.exists(target):
             reply = QMessageBox.question(
-                self, 'File exists',
+                self,
+                "File exists",
                 f"The item '{basename}' already exists in the destination. Overwrite?",
-                QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+                QMessageBox.StandardButton.Yes | 
+                QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
             )
-            if reply == QMessageBox.No:
+            if reply == QMessageBox.StandardButton.No:
                 print("Operation canceled by the user.")
                 log.info("Paste canceled by user (overwrite denied).")
                 show_info(self, "Operation Canceled",
@@ -1075,8 +1091,14 @@ class FileExplorer(QWidget):
             new_file_path = os.path.join(destination_path, file_name if file_name else "New File.txt")
 
             if os.path.exists(new_file_path):
-                overwrite_reply = QMessageBox.question(self, 'File Exists', f"{file_name} already exists. Do you want to overwrite it?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-                if overwrite_reply == QMessageBox.No:
+                overwrite_reply = QMessageBox.question(
+                    self,
+                    "File Exists",
+                    f"{file_name} already exists. Do you want to overwrite it?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No
+                )
+                if overwrite_reply == QMessageBox.StandardButton.No:
                     return
 
             try:

@@ -422,7 +422,7 @@ class DIMPackageGUI(QWidget):
 
         image_container = QWidget(right_wrap)  # Container rechts
         stack = QStackedLayout(image_container)
-        stack.setStackingMode(QStackedLayout.StackAll)  # übereinander
+        stack.setStackingMode(QStackedLayout.StackingMode.StackAll)  # übereinander
 
         # Ebene 0: Bild (bekommt Blur)
         self.image_label = ImageLabel(image_container)  # <— Parent = image_container
@@ -548,11 +548,16 @@ class DIMPackageGUI(QWidget):
         if getattr(self, "extractionWorker", None) and self.extractionWorker.isRunning():
             show_info(self, "Busy", "Cannot clear while extraction is running.")
             return
-        reply = QMessageBox.question(self, 'Clear Confirmation',
-                                     "Are you sure you want to clear all fields and clean the DIMBuild folder?",
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        reply = QMessageBox.question(
+            self,
+            "Clear Confirmation",
+            "Are you sure you want to clear all fields and clean the DIMBuild folder?\n"
+            "This action cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
 
-        if reply == QMessageBox.Yes:
+        if reply == QMessageBox.StandardButton.Yes:
             self.clearFields()
             self.cleanDIMBuildFolder()
 
@@ -634,11 +639,15 @@ class DIMPackageGUI(QWidget):
             self.last_destination_folder = destination_folder
 
         if not self.contentValidation(content_dir):
-            reply = QMessageBox.question(self, "Content Validation Failed",
-                                         "No recognized DAZ main folders found in the content directory. "
-                                         "Do you want to continue anyway?",
-                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-            if reply == QMessageBox.No:
+            reply = QMessageBox.question(
+                self,
+                "Content Validation Failed",
+                "No recognized DAZ main folders found in the content directory. "
+                "Do you want to continue anyway?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if reply == QMessageBox.StandardButton.No:
                 show_info(self, "DIM Creation Canceled", "DIM package creation canceled due to content validation failure.", Qt.Vertical)
                 return
 
