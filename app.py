@@ -245,17 +245,14 @@ class DIMPackageGUI(QWidget):
         self.setMinimumSize(800, 760)
         self.setStyleSheet(tooltip_stylesheet + "DIMPackageGUI{background: rgb(32, 32, 32)}")
 
-        # Root
         root = QVBoxLayout(self)
         root.setContentsMargins(12, 12, 12, 12)
         root.setSpacing(10)
 
-        # Main: links Formular, rechts Bild
         main = QHBoxLayout()
         main.setSpacing(14)
         root.addLayout(main, stretch=0)
 
-        # ===== Links: Formular
         left_wrap = QWidget(self)
         main.addWidget(left_wrap, 1)
 
@@ -272,7 +269,6 @@ class DIMPackageGUI(QWidget):
             lbl.setStyleSheet(label_stylesheet)
             return lbl
 
-        # Store
         self.store_input = EditableComboBox(self)
         self.store_input.addItems(self.storeitems)
         self.store_completer = QCompleter(self.storeitems, self)
@@ -282,7 +278,6 @@ class DIMPackageGUI(QWidget):
         self.store_input.currentIndexChanged.connect(self.updateSourcePrefixBasedOnStore)
         form.addRow(L("Store:"), self.store_input)
 
-        # Prefix + Auto
         prefix_row = QWidget(self)
         pr_h = QHBoxLayout(prefix_row); pr_h.setContentsMargins(0,0,0,0); pr_h.setSpacing(8)
         self.prefix_input = LineEdit(self)
@@ -297,14 +292,12 @@ class DIMPackageGUI(QWidget):
         pr_h.addWidget(self.use_store_prefix_checkbox, 0)
         form.addRow(L("Source Prefix:"), prefix_row)
 
-        # Product Name
         self.product_name_input = ProductLineEdit(self)
         self.product_name_input.setClearButtonEnabled(True)
         self.product_name_input.setPlaceholderText("dForce Starter Essentials")
         self.product_name_input.setToolTip("Enter the name of the product.")
         form.addRow(L("Product Name:"), self.product_name_input)
 
-        # SKU + Part
         sku_row = QWidget(self)
         sku_h = QHBoxLayout(sku_row); sku_h.setContentsMargins(0,0,0,0); sku_h.setSpacing(8)
         self.sku_input = LineEdit(self)
@@ -322,7 +315,6 @@ class DIMPackageGUI(QWidget):
         sku_h.addWidget(self.product_part_input, 0)
         form.addRow(L("Package SKU:"), sku_row)
 
-        # GUID + Generate
         guid_row = QWidget(self)
         guid_h = QHBoxLayout(guid_row); guid_h.setContentsMargins(0,0,0,0); guid_h.setSpacing(8)
         self.guid_input = LineEdit(self)
@@ -342,7 +334,6 @@ class DIMPackageGUI(QWidget):
         guid_h.addWidget(self.generate_guid_button, 0)
         form.addRow(L("Package GUID:"), guid_row)
 
-        # Tags
         tags_row = QWidget(self)
         tags_h = QHBoxLayout(tags_row); tags_h.setContentsMargins(0,0,0,0); tags_h.setSpacing(8)
         self.product_tags_input = LineEdit(self)
@@ -355,7 +346,6 @@ class DIMPackageGUI(QWidget):
         tags_h.addWidget(self.tags_button, 0)
         form.addRow(L("Product Tags:"), tags_row)
 
-        # Options
         opts_row = QWidget(self)
         opts_h = QHBoxLayout(opts_row); opts_h.setContentsMargins(0,0,0,0); opts_h.setSpacing(8)
         self.support_clean_input = CheckBox("Clean Support Directory", self)
@@ -364,7 +354,6 @@ class DIMPackageGUI(QWidget):
         opts_h.addStretch(1)
         form.addRow(L("Options:"), opts_row)
 
-        # Actions
         actions_row = QWidget(self)
         actions_h = QHBoxLayout(actions_row); actions_h.setContentsMargins(0,0,0,0); actions_h.setSpacing(8)
         self.process_button = PrimaryPushButton("Generate", self)
@@ -392,16 +381,12 @@ class DIMPackageGUI(QWidget):
         self.zip_preview_edit.setCursorPosition(0)
         self.zip_preview_edit.setToolTip("Live preview of the final ZIP filename.")
 
-        # Monospace-Schrift für bessere Lesbarkeit
         f = self.zip_preview_edit.font()
-        # versuche bekannte Fixed-Fonts; fallback auf aktuellen
         f.setFamilies(["Consolas", "Cascadia Mono", "DejaVu Sans Mono", "Menlo", f.family()])
         self.zip_preview_edit.setFont(f)
 
-        # immer den vollen Namen im Tooltip anzeigen
         self.zip_preview_edit.textChanged.connect(lambda s: self.zip_preview_edit.setToolTip(s))
 
-        # Copy-Button
         copy_btn = ToolButton(FIF.COPY, self)
         copy_btn.setToolTip("Copy filename to clipboard")
         def _copy_preview():
@@ -414,25 +399,22 @@ class DIMPackageGUI(QWidget):
 
         form.addRow(L("Preview:"), prev_row)
 
-        # ===== Rechts: Bildcontainer mit Stack (Bild + Overlay als Geschwister)
         right_wrap = QWidget(self)
         right = QVBoxLayout(right_wrap)
         right.setContentsMargins(0, 0, 0, 0)
         right.setSpacing(10)
 
-        image_container = QWidget(right_wrap)  # Container rechts
+        image_container = QWidget(right_wrap)
         stack = QStackedLayout(image_container)
-        stack.setStackingMode(QStackedLayout.StackingMode.StackAll)  # übereinander
+        stack.setStackingMode(QStackedLayout.StackingMode.StackAll)
 
-        # Ebene 0: Bild (bekommt Blur)
-        self.image_label = ImageLabel(image_container)  # <— Parent = image_container
+        self.image_label = ImageLabel(image_container)
         self.image_label.setToolTip("Drop an image here or click to select an image file.")
         self.image_label.setMinimumSize(300, 320)
         self.image_label.setMaximumWidth(400)
         stack.addWidget(self.image_label)
 
-        # Ebene 1: Overlay (liegt deckungsgleich über Ebene 0)
-        self._image_overlay = QWidget(image_container)  # <— Parent = image_container (statt self)
+        self._image_overlay = QWidget(image_container)
         self._image_overlay.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         self._image_overlay.setStyleSheet("background: transparent;")
         ov = QVBoxLayout(self._image_overlay)
@@ -460,7 +442,6 @@ class DIMPackageGUI(QWidget):
         main.addWidget(right_wrap, 0)
 
 
-        # ===== Toolbar + Extract
         util_bar = QHBoxLayout()
         util_bar.setContentsMargins(0, 0, 0, 0)
         util_bar.setSpacing(8)
@@ -492,12 +473,10 @@ class DIMPackageGUI(QWidget):
 
         root.addLayout(util_bar)
 
-        # ===== Explorer
         self.fileExplorer = FileExplorer(self.dimbuild_dir, self, dimbuild_dir=self.dimbuild_dir, main_gui=self)
         self.fileExplorer.setMinimumHeight(260)
         root.addWidget(self.fileExplorer, 1)
 
-        # Shortcuts & Signals
         QShortcut(QKeySequence("Ctrl+G"), self, self.generateGUID)
         QShortcut(QKeySequence("Ctrl+Return"), self, self.process)
         QShortcut(QKeySequence("Ctrl+N"), self, self.clearAll)
