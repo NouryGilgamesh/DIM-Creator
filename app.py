@@ -21,9 +21,10 @@ from qfluentwidgets import setFont, PrimaryPushButton, PushButton, Action, Round
 from qfluentwidgets import FluentIcon as FIF
 from PySide6.QtWidgets import (
     QMessageBox, QApplication, QWidget, QLabel, QDialog, 
-    QVBoxLayout, QFileDialog, QCompleter, QHBoxLayout, QFileSystemModel
+    QVBoxLayout, QFileDialog, QCompleter, QHBoxLayout, QFileSystemModel,
+    QGraphicsBlurEffect, QStackedLayout, QSizePolicy, QFormLayout, QSpacerItem
     )
-from PySide6.QtCore import Qt, QThread, Signal, QEasingCurve, QUrl, QSettings, QTimer, QRegularExpression
+from PySide6.QtCore import Qt, QThread, Signal, QEasingCurve, QUrl, QSettings, QTimer, QRegularExpression, QEvent
 from PySide6.QtGui import QPixmap, QCursor, QDesktopServices, QIcon, QKeySequence, QIntValidator, QRegularExpressionValidator, QShortcut
 from xml.etree.ElementTree import Element, SubElement, tostring
 from xml.dom import minidom
@@ -205,170 +206,307 @@ class DIMPackageGUI(QWidget):
         except Exception:
             pass
 
-    def initUI(self):
-        self.setWindowTitle('DIMCreator')
-        self.setFixedSize(780, 690)
+    def _setImageBusy(self, busy: bool, text: str = "Processing…", percent: int | None = None):
+        try:
+            if busy:
+                self.progress_ring.setValue(0)
 
+                if text:
+                    self._overlay_text.setText(text)
+                if percent is not None:
+                    self.progress_ring.setValue(max(0, min(100, percent)))
+
+                eff = QGraphicsBlurEffect(self.image_label)
+                eff.setBlurRadius(12)
+                self._current_blur = eff
+                self.image_label.setGraphicsEffect(eff)
+
+                self._image_overlay.show()
+                self._image_overlay.raise_()
+            else:
+                self._image_overlay.hide()
+
+                eff = getattr(self, "_current_blur", None)
+                if eff is not None:
+                    self.image_label.setGraphicsEffect(None)
+                    try:
+                        eff.deleteLater()
+                    except Exception:
+                        pass
+                    self._current_blur = None
+
+                self.progress_ring.setValue(0)
+        except Exception:
+            pass
+
+    def initUI(self):
+
+        self.setWindowTitle("DIMCreator")
+        self.setMinimumSize(800, 740)
         self.setStyleSheet(tooltip_stylesheet + "DIMPackageGUI{background: rgb(32, 32, 32)}")
 
-        store_label = QLabel('Store:', self)
-        store_label.setGeometry(20, 20, 100, 30)
-        store_label.setStyleSheet(label_stylesheet)
+        # Root
+        root = QVBoxLayout(self)
+        root.setContentsMargins(12, 12, 12, 12)
+        root.setSpacing(10)
+
+        # Main: links Formular, rechts Bild
+        main = QHBoxLayout()
+        main.setSpacing(14)
+        root.addLayout(main, stretch=0)
+
+        # ===== Links: Formular
+        left_wrap = QWidget(self)
+        main.addWidget(left_wrap, 1)
+
+        form = QFormLayout(left_wrap)
+        form.setRowWrapPolicy(QFormLayout.DontWrapRows)
+        form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+        form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        form.setFormAlignment(Qt.AlignTop)
+        form.setHorizontalSpacing(10)
+        form.setVerticalSpacing(10)
+
+        def L(text):
+            lbl = QLabel(text, self)
+            lbl.setStyleSheet(label_stylesheet)
+            return lbl
+
+        # Store
         self.store_input = EditableComboBox(self)
-        self.store_input.setGeometry(130, 20, 250, 30)
         self.store_input.addItems(self.storeitems)
         self.store_completer = QCompleter(self.storeitems, self)
         self.store_input.setCompleter(self.store_completer)
         self.store_input.setMaxVisibleItems(10)
         self.store_input.setToolTip("Select the store from which the product was purchased.")
         self.store_input.currentIndexChanged.connect(self.updateSourcePrefixBasedOnStore)
+        form.addRow(L("Store:"), self.store_input)
 
-        prefix_label = QLabel('Source Prefix:', self)
-        prefix_label.setGeometry(20, 60, 100, 30)
-        prefix_label.setStyleSheet(label_stylesheet)
+        # Prefix + Auto
+        prefix_row = QWidget(self)
+        pr_h = QHBoxLayout(prefix_row); pr_h.setContentsMargins(0,0,0,0); pr_h.setSpacing(8)
         self.prefix_input = LineEdit(self)
-        self.prefix_input.setGeometry(130, 60, 250, 30)
         self.prefix_input.setClearButtonEnabled(True)
-        self.prefix_input.setPlaceholderText('IM')
+        self.prefix_input.setPlaceholderText("IM")
         self.prefix_input.setToolTip("Enter the source prefix, typically the vendor's initials.")
-
-        self.use_store_prefix_checkbox = CheckBox('Auto Prefix', self)
-        self.use_store_prefix_checkbox.setGeometry(390, 60, 150, 30)
+        self.use_store_prefix_checkbox = CheckBox("Auto Prefix", self)
         self.use_store_prefix_checkbox.stateChanged.connect(self.updateSourcePrefixBasedOnStore)
         self.prefix_input.setEnabled(not self.use_store_prefix_checkbox.isChecked())
+        self.prefix_input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        pr_h.addWidget(self.prefix_input, 1)
+        pr_h.addWidget(self.use_store_prefix_checkbox, 0)
+        form.addRow(L("Source Prefix:"), prefix_row)
 
-        product_name_label = QLabel('Product Name:', self)
-        product_name_label.setGeometry(20, 100, 100, 30)
-        product_name_label.setStyleSheet(label_stylesheet)
+        # Product Name
         self.product_name_input = ProductLineEdit(self)
-        self.product_name_input.setGeometry(130, 100, 250, 30) 
         self.product_name_input.setClearButtonEnabled(True)
-        self.product_name_input.setPlaceholderText('dForce Starter Essentials')
+        self.product_name_input.setPlaceholderText("dForce Starter Essentials")
         self.product_name_input.setToolTip("Enter the name of the product.")
+        form.addRow(L("Product Name:"), self.product_name_input)
 
-        sku_label = QLabel('Package SKU:', self)
-        sku_label.setGeometry(20, 140, 100, 30)
-        sku_label.setStyleSheet(label_stylesheet)
+        # SKU + Part
+        sku_row = QWidget(self)
+        sku_h = QHBoxLayout(sku_row); sku_h.setContentsMargins(0,0,0,0); sku_h.setSpacing(8)
         self.sku_input = LineEdit(self)
-        self.sku_input.setGeometry(130, 140, 175, 30)
         self.sku_input.setClearButtonEnabled(True)
-        self.sku_input.setPlaceholderText('47939')
+        self.sku_input.setPlaceholderText("47939")
         self.sku_input.setMaxLength(8)
         self.sku_input.setValidator(QIntValidator(0, 99999999, self))
         self.sku_input.setToolTip("Enter the SKU (Stock Keeping Unit) for the package.")
-
-        sku_part_line = QLabel('-', self)
-        sku_part_line.setGeometry(310, 140, 10, 30)
-        sku_part_line.setStyleSheet(label_stylesheet)
-
+        dash_lbl = QLabel("-", self); dash_lbl.setStyleSheet(label_stylesheet)
         self.product_part_input = CustomCompactSpinBox(self)
-        self.product_part_input.setGeometry(320, 140, 60, 30)
         self.product_part_input.setRange(1, 99)
         self.product_part_input.setValue(1)
+        sku_h.addWidget(self.sku_input, 1)
+        sku_h.addWidget(dash_lbl, 0)
+        sku_h.addWidget(self.product_part_input, 0)
+        form.addRow(L("Package SKU:"), sku_row)
 
-        guid_label = QLabel('Package GUID:', self)
-        guid_label.setGeometry(20, 180, 100, 30)
-        guid_label.setStyleSheet(label_stylesheet)
+        # GUID + Generate
+        guid_row = QWidget(self)
+        guid_h = QHBoxLayout(guid_row); guid_h.setContentsMargins(0,0,0,0); guid_h.setSpacing(8)
         self.guid_input = LineEdit(self)
-        self.guid_input.setGeometry(130, 180, 210, 30)
         self.guid_input.setClearButtonEnabled(True)
-        self.guid_input.setPlaceholderText('a4a82911-662e-4e02-8416-b7b8c0f7d4a4')
+        self.guid_input.setPlaceholderText("a4a82911-662e-4e02-8416-b7b8c0f7d4a4")
         self.guid_input.setToolTip("This is a unique identifier for the package. Click the generate button to create one.")
-
         self.guid_input.setValidator(
             QRegularExpressionValidator(
                 QRegularExpression(r'^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$'),
                 self
             )
         )
-
         self.generate_guid_button = ToolButton(FIF.ADD, self)
-        self.generate_guid_button.setGeometry(350, 180, 30, 30)
         self.generate_guid_button.clicked.connect(self.generateGUID)
-        self.generate_guid_button.setToolTip(" Click the generate button to create a random GUID.")
+        self.generate_guid_button.setToolTip("Click to create a random GUID.")
+        guid_h.addWidget(self.guid_input, 1)
+        guid_h.addWidget(self.generate_guid_button, 0)
+        form.addRow(L("Package GUID:"), guid_row)
 
-        product_tags_label = QLabel('Product Tags:', self)
-        product_tags_label.setGeometry(20, 220, 100, 30)
-        product_tags_label.setStyleSheet(label_stylesheet)
+        # Tags
+        tags_row = QWidget(self)
+        tags_h = QHBoxLayout(tags_row); tags_h.setContentsMargins(0,0,0,0); tags_h.setSpacing(8)
         self.product_tags_input = LineEdit(self)
-        self.product_tags_input.setGeometry(130, 220, 210, 30)
         self.product_tags_input.setClearButtonEnabled(True)
         self.product_tags_input.setToolTip("Click the Tag button to select product tags that apply.")
-
         self.tags_button = ToolButton(FIF.TAG, self)
-        self.tags_button.setGeometry(350, 220, 30, 30)
         self.tags_button.clicked.connect(self.openTagSelectionDialog)
         self.tags_button.setToolTip("Click to select product tags that apply.")
+        tags_h.addWidget(self.product_tags_input, 1)
+        tags_h.addWidget(self.tags_button, 0)
+        form.addRow(L("Product Tags:"), tags_row)
 
-        self.support_clean_input = CheckBox('Clean Support Directory', self)
-        self.support_clean_input.setGeometry(130, 260, 250, 30)
+        # Options
+        opts_row = QWidget(self)
+        opts_h = QHBoxLayout(opts_row); opts_h.setContentsMargins(0,0,0,0); opts_h.setSpacing(8)
+        self.support_clean_input = CheckBox("Clean Support Directory", self)
         self.support_clean_input.setChecked(True)
+        opts_h.addWidget(self.support_clean_input, 0)
+        opts_h.addStretch(1)
+        form.addRow(L("Options:"), opts_row)
 
-        self.process_button = PrimaryPushButton('Generate', self)
-        self.process_button.setGeometry(20, 300, 100, 30)
+        # Actions
+        actions_row = QWidget(self)
+        actions_h = QHBoxLayout(actions_row); actions_h.setContentsMargins(0,0,0,0); actions_h.setSpacing(8)
+        self.process_button = PrimaryPushButton("Generate", self)
         self.process_button.clicked.connect(self.process)
         self.process_button.setToolTip("Click to start the DIM package creation process.")
-
         self.clear_button = ToolButton(FIF.ERASE_TOOL, self)
-        self.clear_button.setGeometry(350, 300, 30, 30)
         self.clear_button.clicked.connect(self.clearAll)
         self.clear_button.setToolTip("Clear all input fields and clean the DIMBuild folder.")
+        actions_h.addWidget(self.process_button, 0)
+        actions_h.addWidget(self.clear_button, 0)
+        actions_h.addStretch(1)
+        form.addRow(L("Actions:"), actions_row)
 
-        self.zip_preview_title = QLabel('Preview:', self)
-        self.zip_preview_title.setGeometry(470, 640, 90, 30)
-        self.zip_preview_title.setStyleSheet(label_stylesheet)
-        self.zip_preview_title.setToolTip("This is how the DIM ZIP will be named.")
+        form.addItem(QSpacerItem(0, 24, QSizePolicy.Minimum, QSizePolicy.Fixed))
+
+        prev_row = QWidget(self)
+        prev_h   = QHBoxLayout(prev_row)
+        prev_h.setContentsMargins(0, 0, 0, 0)
+        prev_h.setSpacing(8)
 
         self.zip_preview_edit = LineEdit(self)
-        self.zip_preview_edit.setGeometry(530, 640, 240, 30)
         self.zip_preview_edit.setReadOnly(True)
+        self.zip_preview_edit.setMinimumWidth(260)
+        self.zip_preview_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.zip_preview_edit.setCursorPosition(0)
         self.zip_preview_edit.setToolTip("Live preview of the final ZIP filename.")
 
-        self.extract_button = PushButton('Extract Archive', self)
-        self.extract_button.setGeometry(330, 640, 120, 30)
-        self.extract_button.clicked.connect(self.extractArchive)
-        self.extract_button.setToolTip("Click to extract a Archive file into the Content folder. Supported are .zip .rar .7z")
+        # Monospace-Schrift für bessere Lesbarkeit
+        f = self.zip_preview_edit.font()
+        # versuche bekannte Fixed-Fonts; fallback auf aktuellen
+        f.setFamilies(["Consolas", "Cascadia Mono", "DejaVu Sans Mono", "Menlo", f.family()])
+        self.zip_preview_edit.setFont(f)
 
-        self.image_label = ImageLabel(self)
-        self.image_label.setGeometry(510, 20, 250, 310)
+        # immer den vollen Namen im Tooltip anzeigen
+        self.zip_preview_edit.textChanged.connect(lambda s: self.zip_preview_edit.setToolTip(s))
+
+        # Copy-Button
+        copy_btn = ToolButton(FIF.COPY, self)
+        copy_btn.setToolTip("Copy filename to clipboard")
+        def _copy_preview():
+            QApplication.clipboard().setText(self.zip_preview_edit.text())
+            show_info(self, "Copied", "Filename copied to clipboard.")
+        copy_btn.clicked.connect(_copy_preview)
+
+        prev_h.addWidget(self.zip_preview_edit, 1)
+        prev_h.addWidget(copy_btn, 0)
+
+        form.addRow(L("Preview:"), prev_row)
+
+        # ===== Rechts: Bildcontainer mit Stack (Bild + Overlay als Geschwister)
+        right_wrap = QWidget(self)
+        right = QVBoxLayout(right_wrap)
+        right.setContentsMargins(0, 0, 0, 0)
+        right.setSpacing(10)
+
+        image_container = QWidget(right_wrap)  # Container rechts
+        stack = QStackedLayout(image_container)
+        stack.setStackingMode(QStackedLayout.StackAll)  # übereinander
+
+        # Ebene 0: Bild (bekommt Blur)
+        self.image_label = ImageLabel(image_container)  # <— Parent = image_container
         self.image_label.setToolTip("Drop an image here or click to select an image file.")
+        self.image_label.setMinimumSize(300, 320)
+        self.image_label.setMaximumWidth(400)
+        stack.addWidget(self.image_label)
 
-        self.fileExplorer = FileExplorer(self.dimbuild_dir, self, dimbuild_dir=self.dimbuild_dir, main_gui=self)
-        self.fileExplorer.setGeometry(15, 380, 750, 250)
+        # Ebene 1: Overlay (liegt deckungsgleich über Ebene 0)
+        self._image_overlay = QWidget(image_container)  # <— Parent = image_container (statt self)
+        self._image_overlay.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        self._image_overlay.setStyleSheet("background: transparent;")
+        ov = QVBoxLayout(self._image_overlay)
+        ov.setContentsMargins(0, 0, 0, 0)
+        ov.setAlignment(Qt.AlignCenter)
 
-        self.update_button = ToolButton(FIF.SYNC, self)
-        self.update_button.setGeometry(100, 640, 30, 30)
-        self.update_button.setToolTip("Check for Updates")
-        self.update_button.clicked.connect(lambda: self.updater.manual_check())
-
-        self.settings_button = ToolButton(FIF.SETTING, self)
-        self.settings_button.setGeometry(60, 640, 30, 30)
-        self.settings_button.clicked.connect(self.showSettingsDialog)
-        self.settings_button.setToolTip("Open Settings Window")
-
-        self.always_on_top_button = ToolButton(FIF.PIN, self)
-        self.always_on_top_button.setCheckable(True)
-        self.always_on_top_button.setGeometry(20, 640, 30, 30)
-        self.always_on_top_button.clicked.connect(self.toggleAlwaysOnTop)
-        self.always_on_top_button.setToolTip("Toggle Always on Top")
-
-        self.progress_ring = ProgressRing(self)
-        self.progress_ring.setGeometry(410, 260, 70, 70)
+        self.progress_ring = ProgressRing(self._image_overlay)
         self.progress_ring.setFixedSize(70, 70)
         self.progress_ring.setTextVisible(True)
         self.progress_ring.setValue(0)
         setFont(self.progress_ring, fontSize=13)
-        self.progress_ring.hide()
 
+        self._overlay_text = QLabel("Working…", self._image_overlay)
+        self._overlay_text.setStyleSheet("color: white; font-size: 10pt;")
+        self._overlay_text.setAlignment(Qt.AlignHCenter)
+
+        ov.addWidget(self.progress_ring, 0, Qt.AlignCenter)
+        ov.addSpacing(8)
+        ov.addWidget(self._overlay_text, 0, Qt.AlignCenter)
+
+        stack.addWidget(self._image_overlay)
+        self._image_overlay.hide()
+
+        right.addWidget(image_container, 1)
+        main.addWidget(right_wrap, 0)
+
+
+        # ===== Toolbar + Extract
+        util_bar = QHBoxLayout()
+        util_bar.setContentsMargins(0, 0, 0, 0)
+        util_bar.setSpacing(8)
+
+        left_tools = QHBoxLayout(); left_tools.setSpacing(8)
+        self.always_on_top_button = ToolButton(FIF.PIN, self)
+        self.always_on_top_button.setCheckable(True)
+        self.always_on_top_button.clicked.connect(self.toggleAlwaysOnTop)
+        self.always_on_top_button.setToolTip("Toggle Always on Top")
+
+        self.settings_button = ToolButton(FIF.SETTING, self)
+        self.settings_button.clicked.connect(self.showSettingsDialog)
+        self.settings_button.setToolTip("Open Settings Window")
+
+        self.update_button = ToolButton(FIF.SYNC, self)
+        self.update_button.setToolTip("Check for Updates")
+        self.update_button.clicked.connect(lambda: self.updater.manual_check())
+
+        for b in (self.always_on_top_button, self.settings_button, self.update_button):
+            left_tools.addWidget(b)
+        util_bar.addLayout(left_tools)
+
+        util_bar.addStretch(1)
+
+        self.extract_button = PushButton("Extract Archive", self)
+        self.extract_button.clicked.connect(self.extractArchive)
+        self.extract_button.setToolTip("Extract an archive into the Content folder (.zip .rar .7z).")
+        util_bar.addWidget(self.extract_button)
+
+        root.addLayout(util_bar)
+
+        # ===== Explorer
+        self.fileExplorer = FileExplorer(self.dimbuild_dir, self, dimbuild_dir=self.dimbuild_dir, main_gui=self)
+        self.fileExplorer.setMinimumHeight(260)
+        root.addWidget(self.fileExplorer, 1)
+
+        # Shortcuts & Signals
         QShortcut(QKeySequence("Ctrl+G"), self, self.generateGUID)
         QShortcut(QKeySequence("Ctrl+Return"), self, self.process)
         QShortcut(QKeySequence("Ctrl+N"), self, self.clearAll)
-        # QShortcut(QKeySequence("F1"), self, self.openFAQ)
 
         self.prefix_input.textChanged.connect(self.updateZipPreview)
         self.sku_input.textChanged.connect(self.updateZipPreview)
         self.product_name_input.textChanged.connect(self.updateZipPreview)
         self.product_part_input.valueChanged.connect(lambda *_: self.updateZipPreview())
+
 
     def showSettingsDialog(self):
         dialog = SettingsDialog(self.doc_main_dir, self)
@@ -404,6 +542,12 @@ class DIMPackageGUI(QWidget):
         self.guid_input.setText(new_guid)
 
     def clearAll(self):
+        if getattr(self, "zip_thread", None) and self.zip_thread.isRunning():
+            show_info(self, "Busy", "Cannot clear while packaging is running.")
+            return
+        if getattr(self, "extractionWorker", None) and self.extractionWorker.isRunning():
+            show_info(self, "Busy", "Cannot clear while extraction is running.")
+            return
         reply = QMessageBox.question(self, 'Clear Confirmation',
                                      "Are you sure you want to clear all fields and clean the DIMBuild folder?",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
@@ -444,6 +588,7 @@ class DIMPackageGUI(QWidget):
             self.product_part_input.setValue(1)
             self.generateGUID()
             self.support_clean_input.setChecked(True)
+            self.cleanUpTemporaryImage()
             self.image_label.loadPlaceholderImage()
             self.updateZipPreview()
             log.info("All data successfully cleared.")
@@ -457,6 +602,10 @@ class DIMPackageGUI(QWidget):
         return valid
 
     def process(self):
+        if getattr(self, "zip_thread", None) and self.zip_thread.isRunning():
+            show_info(self, "Already running", "Packaging is already in progress.")
+            return
+
         dimbuild_dir = os.path.join(doc_main_dir, "DIMBuild")
         content_dir = os.path.join(dimbuild_dir, "Content")
 
@@ -650,11 +799,12 @@ class DIMPackageGUI(QWidget):
             supplement_created = create_supplement(content_dir, product_name, product_tags)
             
             if manifest_created and supplement_created:
-                self.progress_ring.setValue(0)
-                self.progress_ring.show()
+                self._setImageBusy(True, "Packaging…", 0)
                 self.zip_thread = ZipThread(content_dir, prefix, sku, product_part, product_name, destination_folder, zip_content_and_manifests)
                 zt = self.zip_thread
                 self.process_button.setEnabled(False)
+                self.extract_button.setEnabled(False)
+                self.clear_button.setEnabled(False)
                 zt.progressUpdated.connect(self.updateProgress)
                 zt.succeeded.connect(self.DIMProcessCompleted)
                 zt.succeeded.connect(lambda *, _zt=zt: _zt.deleteLater())
@@ -668,6 +818,7 @@ class DIMPackageGUI(QWidget):
 
     def updateProgress(self, percent):
         self.progress_ring.setValue(percent)
+        self._setImageBusy(True, f"Packaging… {percent}%", percent)
 
     def onZipError(self, message: str):
         log.error(f"ZIP error: {message}")
@@ -677,18 +828,20 @@ class DIMPackageGUI(QWidget):
             Qt.Horizontal, InfoBarPosition.TOP_RIGHT, True, 5000
         )
         try:
-            self.progress_ring.hide()
-            self.progress_ring.setValue(0)
+            self._setImageBusy(False)
         except Exception:
             pass
         self.process_button.setEnabled(True)
+        self.extract_button.setEnabled(True)
+        self.clear_button.setEnabled(True)
         self.zip_thread = None
 
     def DIMProcessCompleted(self):
         self.DIMSuccessfullCreatedInfoBar()
-        self.progress_ring.hide()
-        self.cleanUpTemporaryImage()
+        self._setImageBusy(False)
         self.process_button.setEnabled(True)
+        self.extract_button.setEnabled(True)
+        self.clear_button.setEnabled(True)
         self.zip_thread = None
 
     def DIMSuccessfullCreatedInfoBar(self):
