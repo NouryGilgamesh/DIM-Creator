@@ -242,7 +242,7 @@ class DIMPackageGUI(QWidget):
     def initUI(self):
 
         self.setWindowTitle("DIMCreator")
-        self.setMinimumSize(800, 740)
+        self.setMinimumSize(800, 760)
         self.setStyleSheet(tooltip_stylesheet + "DIMPackageGUI{background: rgb(32, 32, 32)}")
 
         # Root
