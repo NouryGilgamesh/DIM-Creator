@@ -5,6 +5,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## v1.2.0
+### Added
+- **Progress Ring Overlay**: Centered progress ring with percentage display shown over the preview image during packaging.
+- **Preview Filename Improvements**:
+  - Monospace font for improved readability.
+  - Dedicated copy-to-clipboard button with confirmation toast.
+  - Adjusted position for clearer separation from action controls.
+
+### Changed
+- **Complete UI Redesign** for a cleaner, more modern Fluent-inspired look.
+- Migrated project from **PyQt5** → **PySide6** for long-term Qt6 compatibility.
+  - Replaced all `pyqtSignal` usages with `Signal`.
+  - Updated imports to PySide6 modules (`QtWidgets`, `QtCore`, `QtGui`, `QtNetwork`).
+  - Updated enums to Qt6 namespaced versions (`Qt.WindowType.*`, `Qt.WidgetAttribute.*`, `QAbstractItemView.SelectionBehavior.*`, `QAbstractItemView.EditTrigger.*`).
+- Switched to **QFluentWidgets (Community Edition [full])** for modern Fluent UI components.
+- Standardized logging across modules:
+  - All modules now use a named logger via `get_logger`.
+  - Unified formatting and log levels.
+- Safer tooltip handling:
+  - Added validity checks (`shiboken6.isValid`) before closing tooltips.
+  - Automatic tooltip cleanup now prevents crashes from double-closing deleted widgets.
+- Cleaned up duplicate and unused imports across modules.
+
+### Fixed
+- Extraction no longer crashes the app when multiple archives are found (worker now exits gracefully).
+- Fixed crash caused by destroying QThreads while still running (moved cleanup to `finished`).
+- Fixed crashes caused by legacy PyQt5-specific classes.
+- Fixed double “process completed” notifications by separating success and error signals in zipping.
+- Fixed tooltip crash (`Internal C++ object already deleted`) by validating widget existence before closing.
+- Drop events outside the build directory are now explicitly ignored to prevent inconsistent state.
+- Fixed cases where certain dialogs or toasts did not display correctly.
+
+### ⚠️ Important
+If you run DIM-Creator from source:  
+Please **reinstall all pip dependencies** (`pip install -r requirements.txt`) because of the migration from **PyQt5** to **PySide6** and the switch to **PySide6-QFluentWidgets**.
 
 ## v1.1.2
 ### Added
