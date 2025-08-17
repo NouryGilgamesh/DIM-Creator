@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
-from PySide6.QtCore import QObject, QThread, Signal, QTimer, Qt
+from PySide6.QtCore import QObject, QThread, Signal, QTimer
 from PySide6.QtWidgets import QTextBrowser
 from PySide6.QtGui import QDesktopServices, QFont
 from PySide6.QtCore import QUrl

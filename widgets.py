@@ -5,23 +5,23 @@ import base64
 
 from PySide6.QtWidgets import (
     QMessageBox, QWidget, QLabel, QDialog, QVBoxLayout, QFileDialog,
-    QCompleter, QHBoxLayout, QFileSystemModel
+    QHBoxLayout, QFileSystemModel
 )
 from PySide6.QtCore import (
-    Qt, QThread, Signal, QEasingCurve, QUrl, QTimer, QRegularExpression
+    Qt, QThread, Signal, QEasingCurve, QUrl, QTimer
 )
 from PySide6.QtNetwork import (
     QNetworkAccessManager, QNetworkRequest, QNetworkReply
 )
 from PySide6.QtGui import (
-    QPixmap, QImage, QCursor, QDesktopServices, QIcon, QKeySequence,
-    QIntValidator, QRegularExpressionValidator, QShortcut
+    QPixmap, QImage, QCursor, QDesktopServices, QKeySequence,
+    QShortcut
 )
 from qfluentwidgets import (
     setTheme, Theme, PrimaryPushButton, PushButton, Action, RoundMenu, LineEdit,
-    EditableComboBox, CheckBox, InfoBar, InfoBarPosition, InfoBarIcon, ProgressRing,
-    CompactSpinBox, ToolButton, TogglePushButton, FlowLayout, TreeView,
-    MessageBoxBase, SubtitleLabel, StateToolTip
+    InfoBar, InfoBarPosition, InfoBarIcon,
+    CompactSpinBox, TogglePushButton, FlowLayout, TreeView,
+    MessageBoxBase, SubtitleLabel
 )
 from qfluentwidgets import FluentIcon as FIF
 

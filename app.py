@@ -2,12 +2,10 @@ import sys
 import os
 import tempfile
 import shutil
-import json
 import zipfile
 import stat
 import uuid
 import re
-import subprocess
 import patoolib
 import ctypes
 import shiboken6
@@ -17,15 +15,15 @@ if sys.stdout is None:
 if sys.stderr is None:
     sys.stderr = open(os.devnull, "w")
 
-from qfluentwidgets import setFont, PrimaryPushButton, PushButton, Action, RoundMenu, LineEdit, setTheme, Theme, EditableComboBox, CheckBox, InfoBar, InfoBarPosition, InfoBarIcon, ProgressRing, CompactSpinBox, ToolButton, TogglePushButton, FlowLayout, TreeView, MessageBoxBase, SubtitleLabel, StateToolTip
+from qfluentwidgets import setFont, PrimaryPushButton, PushButton, LineEdit, setTheme, Theme, EditableComboBox, CheckBox, InfoBar, InfoBarPosition, ProgressRing, ToolButton, StateToolTip
 from qfluentwidgets import FluentIcon as FIF
 from PySide6.QtWidgets import (
     QMessageBox, QApplication, QWidget, QLabel, QDialog, 
-    QVBoxLayout, QFileDialog, QCompleter, QHBoxLayout, QFileSystemModel,
+    QVBoxLayout, QFileDialog, QCompleter, QHBoxLayout,
     QGraphicsBlurEffect, QStackedLayout, QSizePolicy, QFormLayout, QSpacerItem
     )
-from PySide6.QtCore import Qt, QThread, Signal, QEasingCurve, QUrl, QSettings, QTimer, QRegularExpression, QEvent
-from PySide6.QtGui import QPixmap, QCursor, QDesktopServices, QIcon, QKeySequence, QIntValidator, QRegularExpressionValidator, QShortcut
+from PySide6.QtCore import Qt, QThread, Signal, QSettings, QTimer, QRegularExpression
+from PySide6.QtGui import QIcon, QKeySequence, QIntValidator, QRegularExpressionValidator, QShortcut
 from xml.etree.ElementTree import Element, SubElement, tostring
 from xml.dom import minidom
 from PIL import Image, ImageOps
@@ -33,14 +31,14 @@ from concurrent.futures import ThreadPoolExecutor
 
 from utils import (
     resource_path, documents_dir, downloads_dir, DOC_MAIN_DIR,
-    suppress_cmd_window, get_optimal_workers, calculate_total_files,
+    suppress_cmd_window, get_optimal_workers,
     tooltip_stylesheet, label_stylesheet,
-    show_warning, show_success, show_error, show_info
+    show_error, show_info, show_success
 )
-from logger_utils import get_logger, set_level
+from logger_utils import get_logger
 from widgets import (
     ProductLineEdit, TagSelectionDialog, CustomCompactSpinBox, ImageLabel,
-    ZipThread, NameEntryDialog, CustomTreeView, FileExplorer
+    ZipThread, FileExplorer
 )
 from config_utils import load_configurations
 from settings import SettingsDialog
@@ -833,15 +831,7 @@ class DIMPackageGUI(QWidget):
         self.zip_thread = None
 
     def DIMSuccessfullCreatedInfoBar(self):
-        InfoBar.success(
-            title='Success',
-            content="The DIM has been successfully created and saved.",
-            orient=Qt.Orientation.Horizontal,
-            isClosable=True,
-            position=InfoBarPosition.TOP_RIGHT,
-            duration=2000,
-            parent=self
-        )
+        show_success(self, "Success", "The DIM has been successfully created and saved.")
 
     def extractArchive(self):
         if getattr(self, "extractionWorker", None) and self.extractionWorker.isRunning():
