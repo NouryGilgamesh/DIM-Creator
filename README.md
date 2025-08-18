@@ -1,6 +1,6 @@
 # DIM-Creator
 
-*A fast PyQt5 app for creating, packaging, and managing DAZ Install Manager (DIM) packages.*
+*A fast PySide6 app for creating, packaging, and managing DAZ Install Manager (DIM) packages.*
 
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
 ![PyQt5](https://img.shields.io/badge/GUI-PyQt5-brightgreen)
@@ -34,7 +34,7 @@
 ## Overview
 
 ### What is it?
-A desktop app (PyQt5 + qfluentwidgets) that builds **DAZ Install Manager (DIM)** packages.
+A desktop app (PySide6 + qfluentwidgets) that builds **DAZ Install Manager (DIM)** packages.
 
 ### Who is it for?
 DAZ Studio users, creators, and vendors who want fast, repeatable, and tidy DIM packages—with correct folder layout, a cover image, and the required XML manifests.
@@ -155,7 +155,7 @@ Your custom settings and presets are preserved after updates.
 ## Screenshots
 
 <p align="center">
-  <img width="781" height="721" alt="DIM-Creator main window" src="https://github.com/user-attachments/assets/4d8c9832-72c0-48c0-87dc-4c4f3d0a8897" />
+  <img width="781" height="721" alt="DIM-Creator main window" src="https://github.com/user-attachments/assets/3df3069e-211c-45e9-b3fa-51bc27bf31bb" />
 </p>
 
 ---
