@@ -3,7 +3,7 @@
 *A fast PySide6 app for creating, packaging, and managing DAZ Install Manager (DIM) packages.*
 
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
-![PyQt5](https://img.shields.io/badge/GUI-PyQt5-brightgreen)
+![PyQt5](https://img.shields.io/badge/GUI-PySide6-brightgreen)
 ![OS](https://img.shields.io/badge/OS-Windows-lightgrey)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-orange.svg)](LICENSE)
 [![Total Downloads](https://img.shields.io/github/downloads/H1ghSyst3m/DIM-Creator/total)](https://github.com/H1ghSyst3m/DIM-Creator/releases)
